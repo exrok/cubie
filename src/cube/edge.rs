@@ -132,24 +132,29 @@ impl Mul<Move> for EdgeMap {
     }
 }
 
+impl MulAssign<Move> for EdgeMap {
+    fn mul_assign(&mut self, mv: Move){
+        *self *= mv.edges();
+    }
+}
+
 impl Mul<FaceMove> for EdgeMap {
     type Output = Self;
 
     #[inline]
-    fn mul(self, turn: FaceMove) -> Self {
-        self.apply(turn)
+    fn mul(self, mv: FaceMove) -> Self {
+        self*mv.edges()
     }
 }
 
 impl MulAssign<FaceMove> for EdgeMap {
     #[inline]
-    fn mul_assign(&mut self, rhs: FaceMove) {
-        *self = self.apply(rhs);
+    fn mul_assign(&mut self, mv: FaceMove) {
+        *self *= mv.edges()
     }
 }
-impl Mul for EdgeMap {
-    // The multiplication of rational numbers is a closed operation.
 
+impl Mul for EdgeMap {
     type Output = Self;
     fn mul(self, rhs: Self) -> Self {
         self.multiply(rhs)
@@ -158,11 +163,6 @@ impl Mul for EdgeMap {
 impl MulAssign for EdgeMap {
     fn mul_assign(&mut self, rhs: Self){
         *self = self.multiply(rhs);
-    }
-}
-impl MulAssign<Move> for EdgeMap {
-    fn mul_assign(&mut self, mv: Move){
-        *self *= mv.edges();
     }
 }
 
@@ -293,217 +293,199 @@ impl EdgeMap {
 // relative to current positions (meaning the index's where not independent).
 // Fixing the representation issue of `CornerMap` made the direct bit-twiddling
 // approach less-efficient.
-impl EdgeMap {
-    fn filter_down(self) -> u64 {
-        filter_mask(self.set & !(self.set >> 2))
-    }
-    fn filter_up(self) -> u64 {
-        filter_mask(!(self.set | (self.set >> 2)))
-    }
-// Binary { op: ANDI, a: 1, b: 3 }
-// Binary { op: NOR, a: 1, b: 3 }
-    fn filter_right(self) -> u64 {
-        filter_mask((self.set >> 1) & !(self.set >> 3))
-    }
-    fn filter_left(self) -> u64 {
-        filter_mask(!((self.set >> 1) | (self.set >> 3)))
-    }
-// BinaryOffset { op: IAND, a: 1, b: 3, offset: 3 }
-// Multi4 { op1: XNOR, op2: OR, a1: 0, b1: 1, a2: 2, b2: 3, join: 0 }
-    fn filter_front(self) -> u64 {
-        let e = self.set + (E0|E1);
-        filter_mask(!(e >> 1) & (e >> 3))
-    }
-    fn filter_back(self) -> u64 {
-        let e = self.set;
-        filter_mask(!((e) ^ (e >> 1)) & ((e>>2) | (e>>3)))
-    }
+// 
+// For now, the simplified, multiply-only, implementation will be used.
+// impl EdgeMap {
+//     fn filter_down(self) -> u64 {
+//         filter_mask(self.set & !(self.set >> 2))
+//     }
+//     fn filter_up(self) -> u64 {
+//         filter_mask(!(self.set | (self.set >> 2)))
+//     }
+//     fn filter_right(self) -> u64 {
+//         filter_mask((self.set >> 1) & !(self.set >> 3))
+//     }
+//     fn filter_left(self) -> u64 {
+//         filter_mask(!((self.set >> 1) | (self.set >> 3)))
+//     }
+//     fn filter_front(self) -> u64 {
+//         let e = self.set + (E0|E1);
+//         filter_mask(!(e >> 1) & (e >> 3))
+//     }
+//     fn filter_back(self) -> u64 {
+//         let e = self.set;
+//         filter_mask(!((e) ^ (e >> 1)) & ((e>>2) | (e>>3)))
+//     }
 
-// ===== up_cw ====
-// [(10, 2), (2, 8), (8, 0), (0, 10)]
-// SCORE: 2
-// BIT 0: Some(Zero) 
-// BIT 1: Some(Unary { negate: true, a: -2 }) !(e >> 2)
-// BIT 2: Some(Zero) 
-// BIT 3: Some(One) 
+//     #[inline]
+//     fn apply(self, turn: FaceMove) -> EdgeMap {
+//         use FaceMove::*;
+//         (match turn {
+//             R2 => EdgeMap::right_2,
+//             Rcw => EdgeMap::right_cw,
+//             Rccw => EdgeMap::right_ccw,
+//             L2 => EdgeMap::left_2,
+//             Lcw => EdgeMap::left_cw,
+//             Lccw => EdgeMap::left_ccw,
+//             U2 => EdgeMap::up_2,
+//             Ucw =>  EdgeMap::up_cw,
+//             Uccw => EdgeMap::up_ccw,
+//             D2 => EdgeMap::down_2,
+//             Dcw => EdgeMap::down_cw,
+//             Dccw =>EdgeMap::down_ccw,
+//             F2 => EdgeMap::front_2,
+//             Fcw => EdgeMap::front_cw,
+//             Fccw =>EdgeMap::front_ccw,
+//             B2 => EdgeMap::back_2,
+//             Bcw => EdgeMap::back_cw,
+//             Bccw =>EdgeMap::back_ccw,
+//         })(self)
+//     }
 
-// ===== up_ccw ====
-// [(2, 10), (8, 2), (0, 8), (10, 0)]
-// SCORE: 1
-// BIT 0: Some(Zero) 
-// BIT 1: Some(Unary { negate: false, a: -2 }) e >> 2
-// BIT 2: Some(Zero) 
-// BIT 3: Some(One) 
-    #[inline]
-    fn apply(self, turn: FaceMove) -> EdgeMap {
-        use FaceMove::*;
-        (match turn {
-            R2 => EdgeMap::right_2,
-            Rcw => EdgeMap::right_cw,
-            Rccw => EdgeMap::right_ccw,
-            L2 => EdgeMap::left_2,
-            Lcw => EdgeMap::left_cw,
-            Lccw => EdgeMap::left_ccw,
-            U2 => EdgeMap::up_2,
-            Ucw =>  EdgeMap::up_cw,
-            Uccw => EdgeMap::up_ccw,
-            D2 => EdgeMap::down_2,
-            Dcw => EdgeMap::down_cw,
-            Dccw =>EdgeMap::down_ccw,
-            F2 => EdgeMap::front_2,
-            Fcw => EdgeMap::front_cw,
-            Fccw =>EdgeMap::front_ccw,
-            B2 => EdgeMap::back_2,
-            Bcw => EdgeMap::back_cw,
-            Bccw =>EdgeMap::back_ccw,
-            // M2 => self.right_cw().right_cw().left_cw().left_cw(),
-            // Mcw => self.right_cw().left_ccw(),
-            // Mccw => self.right_ccw().left_cw(),
-            // S2 => self.front_cw().front_cw().back_cw().back_cw(),
-            // Scw => self.front_ccw().back_cw(),
-            // Sccw => self.front_cw().back_ccw(),
-            // E2 => self.up_cw().up_cw().down_cw().down_cw(),
-            // Ecw => self.up_ccw().down_cw(),
-            // Eccw => self.up_cw().down_ccw(),
-        })(self)
-    }
+//     pub fn back_2(self) -> EdgeMap {
+//         let e = self.set;
+//         let k = (e >> 1) ^  e;
+//         let k = !k & (k >> 2) & E0;
+//         return EdgeMap{set: e ^ k ^ (k << 1)};
+//     }
+//     pub fn down_2(self) -> EdgeMap {
+//         let e = self.set;
+//         return EdgeMap{set: e^ (((self.set << 1) & !(self.set >> 1)) & E1)}
+//     }
+//     fn up_ccw(self) -> EdgeMap {
+//         let e = self.set;
+//         return EdgeMap{set: e ^ ((E3 | (!(e >> 2) & E1)) & self.filter_up())};
+//     }
+//     fn up_cw(self) -> EdgeMap {
+//         let e = self.set;
+//         return EdgeMap{set: e ^ ((E3 | ((e >> 2) & E1)) & self.filter_up())};
+//     }
+//     fn down_ccw(self) -> EdgeMap {
+//         let e = self.set;
+//         return EdgeMap{set: e ^ ((E3 | (!(e >> 2) & E1)) & self.filter_down())};
+//     }
+//     fn down_cw(self) -> EdgeMap {
+//         let e = self.set;
+//         return EdgeMap{set: e ^ ((E3 | ((e >> 2) & E1)) & self.filter_down())};
+//     }
 
-    pub fn back_2(self) -> EdgeMap {
-        let e = self.set;
-        let k = (e >> 1) ^  e;
-        let k = !k & (k >> 2) & E0;
-        return EdgeMap{set: e ^ k ^ (k << 1)};
-    }
-    pub fn down_2(self) -> EdgeMap {
-        let e = self.set;
-        return EdgeMap{set: e^ (((self.set << 1) & !(self.set >> 1)) & E1)}
-    }
-    fn up_ccw(self) -> EdgeMap {
-        let e = self.set;
-        return EdgeMap{set: e ^ ((E3 | (!(e >> 2) & E1)) & self.filter_up())};
-    }
-    fn up_cw(self) -> EdgeMap {
-        let e = self.set;
-        return EdgeMap{set: e ^ ((E3 | ((e >> 2) & E1)) & self.filter_up())};
-    }
-    fn down_ccw(self) -> EdgeMap {
-        let e = self.set;
-        return EdgeMap{set: e ^ ((E3 | (!(e >> 2) & E1)) & self.filter_down())};
-    }
-     fn down_cw(self) -> EdgeMap {
-        let e = self.set;
-        return EdgeMap{set: e ^ ((E3 | ((e >> 2) & E1)) & self.filter_down())};
-    }
+//     fn right_cw(self) -> EdgeMap {
+//         let e = self.set;
+//         return EdgeMap{set: e ^ (( E2 | (!(e >> 2) & E0)) & self.filter_right())};
+//     }
+//      fn right_ccw(self) -> EdgeMap {
+//         let e = self.set;
+//         return EdgeMap{set: e ^ (( E2 | ((e >> 2) & E0)) & self.filter_right())};
+//     }
+//     fn left_cw(self ) -> EdgeMap {
+//         let e = self.set;
+//         return EdgeMap{set: e ^ ((E2 | ((!(e >> 2)) & E0)) & self.filter_left())};
+//     }
+//     fn left_ccw(self) -> EdgeMap {
+//         let e = self.set;
+//         return EdgeMap{set: e ^ ((E2 | ((e >> 2) & E0)) & self.filter_left())};
+//     }
+//     fn front_ccw(self) -> EdgeMap {
+//         let e = self.set;
+//         return EdgeMap{set: e ^ (((E4|E3|E2) | ((e >> 3) & E0) | ((e >> 2) & E1))
+//                                  & self.filter_front())};
+//     }
+//     fn front_cw(self) -> EdgeMap {
+//         let e = self.set;
+//         return EdgeMap{set: e ^ (((E4|E3|E2) | ((e >> 2) & E0) | ((e >> 1) & E1))
+//                                  & self.filter_front())};
+//     }
+//     fn back_ccw(self) -> EdgeMap {
+//         let e = self.set;
+//         return EdgeMap{set: e ^ (((E4|E3|E2) | ((e >> 3) & E0) | ((e >> 2) & E1))
+//                                  & self.filter_back())};
+//     }
+//     fn back_cw(self) -> EdgeMap {
+//         let e = self.set;
+//         return EdgeMap{set: e ^ (((E4|E3|E2) | ((e >> 2) & E0) | ((e >> 1) & E1))
+//                                  & self.filter_back())};
+//     }
 
-    fn right_cw(self) -> EdgeMap {
-        let e = self.set;
-        return EdgeMap{set: e ^ (( E2 | (!(e >> 2) & E0)) & self.filter_right())};
-    }
-     fn right_ccw(self) -> EdgeMap {
-        let e = self.set;
-        return EdgeMap{set: e ^ (( E2 | ((e >> 2) & E0)) & self.filter_right())};
-    }
-    fn left_cw(self ) -> EdgeMap {
-        let e = self.set;
-        return EdgeMap{set: e ^ ((E2 | ((!(e >> 2)) & E0)) & self.filter_left())};
-    }
-    fn left_ccw(self) -> EdgeMap {
-        let e = self.set;
-        return EdgeMap{set: e ^ ((E2 | ((e >> 2) & E0)) & self.filter_left())};
-    }
-    fn front_ccw(self) -> EdgeMap {
-        let e = self.set;
-        return EdgeMap{set: e ^ (((E4|E3|E2) | ((e >> 3) & E0) | ((e >> 2) & E1))
-                                 & self.filter_front())};
-    }
-    fn front_cw(self) -> EdgeMap {
-        let e = self.set;
-        return EdgeMap{set: e ^ (((E4|E3|E2) | ((e >> 2) & E0) | ((e >> 1) & E1))
-                                 & self.filter_front())};
-    }
-    fn back_ccw(self) -> EdgeMap {
-        let e = self.set;
-        return EdgeMap{set: e ^ (((E4|E3|E2) | ((e >> 3) & E0) | ((e >> 2) & E1))
-                                 & self.filter_back())};
-    }
-    fn back_cw(self) -> EdgeMap {
-        let e = self.set;
-        return EdgeMap{set: e ^ (((E4|E3|E2) | ((e >> 2) & E0) | ((e >> 1) & E1))
-                                 & self.filter_back())};
-    }
+//     fn front_2(self) -> EdgeMap {
+//         let e = self.set;
+//         let k = (e >> 1) ^  e;
+//         let k = k & (k >> 2) & E0;
+//         return EdgeMap{set: e ^ k ^ (k << 1)};
+//     }
 
-    fn front_2(self) -> EdgeMap {
-        let e = self.set;
-        let k = (e >> 1) ^  e;
-        let k = k & (k >> 2) & E0;
-        return EdgeMap{set: e ^ k ^ (k << 1)};
-    }
-    fn e_cw(self) -> EdgeMap {
-        let e = self.set;
-        let f = (!e << 1) & E3; //Selection
-        return EdgeMap{set: e ^ f ^ ((f & ((!e << 3)^e)) >> 2) };
-    }
-    fn e_2(self) -> EdgeMap {
-        let e = self.set;
-        let f = (!e >>1) & E1; //Selection
-        return EdgeMap{set: e ^ f };
-    }
-    fn e_ccw(self) -> EdgeMap {
-        let e = self.set;
-        let f = (!e << 1) & E3; //Selection
-        return EdgeMap{set: e ^ f ^ ((f & ((e << 3)^e)) >> 2) };
-    }
+//     fn e_cw(self) -> EdgeMap {
+//         let e = self.set;
+//         let f = (!e << 1) & E3; //Selection
+//         return EdgeMap{set: e ^ f ^ ((f & ((!e << 3)^e)) >> 2) };
+//     }
 
-    pub fn m_cw(self) -> EdgeMap {
-        let e = self.set;
-        let f = (!e >> 1) & E2; //Selection
-        return EdgeMap{set: e ^ f ^ ((f & ((e << 1)^e)) >> 2) };
-    }
-    fn m_ccw(self) -> EdgeMap {
-        let e = self.set;
-        let f = (!e >> 1) & E2; //Selection
-        return EdgeMap{set: e ^ f ^ ((f & ((!e << 1)^e)) >> 2) };
-    }
-    fn m_2(self) -> EdgeMap {
-        let e = self.set;
-        let f = (!e >>3) & E0; //Selection
-        return EdgeMap{set: e ^ f };
-    }
+//     fn e_2(self) -> EdgeMap {
+//         let e = self.set;
+//         let f = (!e >>1) & E1; //Selection
+//         return EdgeMap{set: e ^ f };
+//     }
 
-    pub fn up_2(self) -> EdgeMap {
-        let e = self.set;
-        return EdgeMap{set: e^ (!((e << 1) | (e >> 1)) & E1)}
-    }
-   fn right_2(self) -> EdgeMap {
-        let e = self.set;
-        EdgeMap{set: e ^ ((e >> 1) & !(e >> 3) & E0)}
-    }
-    fn left_2(self) -> EdgeMap{
-        let e = self.set;
-        EdgeMap{set: e ^ (!((self.set >> 1) | (self.set >> 3)) & E0)}
-    }
-    fn s_ccw(self) -> EdgeMap {
-        let e = self.set;
-        let k = (e >> 1) ^ e;
-        let l = ((e >> 3) ^k) &E0; 
-        let l =(l+l) | l; 
-//        let l = !(( (e & E0) << 1) | e);
-        EdgeMap{set: e ^ (((E4|E3|E2) | (l & (E0 | E1)))
-                          & filter_mask(k >> 2))}
-    }
-    fn s_2(self) -> EdgeMap {
-        let e = self.set;
-        let k = (e >> 1) ^  e;
-        let k = (k >> 2) & E0;
-        return EdgeMap{set: e ^ k ^ (k << 1)};
-    }
-    fn s_cw(self) -> EdgeMap {
-        let e = self.set;
-        let k = (e >> 1) ^ e;
-        let l = ((e >> 2) ^k) &E0; 
-        let l =(l+l) | l; 
-//        let l = !(( (e & E0) << 1) | e);
-        EdgeMap{set: e ^ (((E4|E3|E2) | (l & (E0 | E1)))
-                          & filter_mask(k >> 2))}
-    }
-}
+//     fn e_ccw(self) -> EdgeMap {
+//         let e = self.set;
+//         let f = (!e << 1) & E3; //Selection
+//         return EdgeMap{set: e ^ f ^ ((f & ((e << 3)^e)) >> 2) };
+//     }
+
+//     pub fn m_cw(self) -> EdgeMap {
+//         let e = self.set;
+//         let f = (!e >> 1) & E2; //Selection
+//         return EdgeMap{set: e ^ f ^ ((f & ((e << 1)^e)) >> 2) };
+//     }
+
+//     fn m_ccw(self) -> EdgeMap {
+//         let e = self.set;
+//         let f = (!e >> 1) & E2; //Selection
+//         return EdgeMap{set: e ^ f ^ ((f & ((!e << 1)^e)) >> 2) };
+//     }
+
+//     fn m_2(self) -> EdgeMap {
+//         let e = self.set;
+//         let f = (!e >>3) & E0; //Selection
+//         return EdgeMap{set: e ^ f };
+//     }
+
+//     pub fn up_2(self) -> EdgeMap {
+//         let e = self.set;
+//         return EdgeMap{set: e^ (!((e << 1) | (e >> 1)) & E1)}
+//     }
+
+//     fn right_2(self) -> EdgeMap {
+//         let e = self.set;
+//         EdgeMap{set: e ^ ((e >> 1) & !(e >> 3) & E0)}
+//     }
+
+//     fn left_2(self) -> EdgeMap{
+//         let e = self.set;
+//         EdgeMap{set: e ^ (!((self.set >> 1) | (self.set >> 3)) & E0)}
+//     }
+
+//     fn s_ccw(self) -> EdgeMap {
+//         let e = self.set;
+//         let k = (e >> 1) ^ e;
+//         let l = ((e >> 3) ^k) &E0; 
+//         let l =(l+l) | l; 
+//         EdgeMap{set: e ^ (((E4|E3|E2) | (l & (E0 | E1)))
+//                           & filter_mask(k >> 2))}
+//     }
+
+//     fn s_2(self) -> EdgeMap {
+//         let e = self.set;
+//         let k = (e >> 1) ^  e;
+//         let k = (k >> 2) & E0;
+//         return EdgeMap{set: e ^ k ^ (k << 1)};
+//     }
+
+//     fn s_cw(self) -> EdgeMap {
+//         let e = self.set;
+//         let k = (e >> 1) ^ e;
+//         let l = ((e >> 2) ^k) &E0; 
+//         let l =(l+l) | l; 
+//         EdgeMap{set: e ^ (((E4|E3|E2) | (l & (E0 | E1)))
+//                           & filter_mask(k >> 2))}
+//     }
+// }
