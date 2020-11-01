@@ -1,4 +1,5 @@
-use crate::{ CornerMap, Face, Move };
+use crate::{  Face, Cube, };
+use std::convert::TryInto;
 
 /// Center piece mapping for 3x3 cube: Center -> CenterPosition
 #[derive(Clone,Copy,Eq,PartialEq)]
@@ -11,60 +12,8 @@ impl Default for CenterMap {
     }
 }
 
-#[derive(Clone,Copy,Eq,PartialEq,Hash)]
-pub struct CenteredCornerMap {
-    pub raw: u64
-}
-
-impl Default for CenteredCornerMap {
-    fn default() -> CenteredCornerMap {
-        CenteredCornerMap{
-            raw: CenterMap::default().map | CornerMap::default().set,
-        }
-    }
-}
-
-impl std::ops::Mul for CenteredCornerMap {
-    type Output = Self;
-    fn mul(self, rhs: CenteredCornerMap) -> Self {
-        let corners = self.corners() * rhs.corners(); 
-        let centers = self.centers() * rhs.centers(); 
-        CenteredCornerMap{raw: centers.map | corners.set}
-    }
-}
-impl CenteredCornerMap {
-    #[inline]
-    pub fn corners(self) -> CornerMap {
-        CornerMap{set: self.raw & 0x1f1f1f1f_1f1f1f1f }
-    }
-    #[inline]
-    pub fn centers(self) -> CenterMap {
-        CenterMap{map: self.raw & 0xe0e0e0}
-    }
-}
-
-impl From<CornerMap> for CenteredCornerMap {
-    fn from(cm: CornerMap) -> CenteredCornerMap {
-        CenteredCornerMap{raw: CenterMap::default().map |
-                          cm.set
-        }
-    }
-}
 
 
-impl std::ops::MulAssign<Move> for CenterMap {
-    #[inline]
-    fn mul_assign(&mut self, mv: Move) {
-        *self = *self * mv.centers();
-    }
-}
-impl std::ops::Mul<Move> for CenterMap {
-    type Output = Self;
-    #[inline]
-    fn mul(self, mv: Move) -> Self {
-        self* mv.centers()
-    }
-}
 impl std::ops::Mul for CenterMap {
     type Output = Self;
     #[inline]
@@ -80,8 +29,14 @@ impl std::ops::Mul for CenterMap {
 }
 
 
-use std::convert::TryFrom;
-use std::convert::TryInto;
+impl std::ops::MulAssign for CenterMap {
+    #[inline]
+    fn mul_assign(&mut self, centers: CenterMap) {
+        *self = *self*centers;
+    }
+}
+
+
 
 impl std::fmt::Debug for CenterMap {
    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -93,6 +48,11 @@ impl std::fmt::Debug for CenterMap {
 }
 
 impl CenterMap {
+    #[inline]
+    pub fn cube(self) -> Cube {
+        crate::moves::ROTATION_TABLE[self.index() as usize]
+    }
+
     pub fn inverse_multiply(self, rhs: CenterMap) -> CenterMap {
         let a = self.map;
         let b = rhs.map;
@@ -115,14 +75,7 @@ impl CenterMap {
     }
 
     pub fn index(self) -> u8 {
-        let xx = self.map;
-        // let index = (xx&0xe0_60_c0)*(3+(1<<8)*1 + (1<<16)*7);
-        // let mut index = (index >> 21)&0b11111;
-        // let mk = 0-((index + 0b1000)>>5);
-        // index = index + ((((!index&0b11)<<3) - (index & 0b11011))&mk);
-        // index as u8
-
-        let mut index = (xx & 0xE0_E0_C0) * (10 + (1<<8)*1 + (1<<16)*7);
+        let mut index = (self.map & 0xE0_E0_C0) * (10 + (1<<8)*1 + (1<<16)*7);
         index = (!index >> 21) & 0b11111;
         index ^= (index + 0b1000) >> 2;
         index as u8
@@ -131,9 +84,10 @@ impl CenterMap {
     pub fn get(self, face: Face) -> Face {
         let v = (self.map>>((((face as u8)&0b110)<<2)+5)) as u8;
         unsafe {
-           ((v&0b111)^((face as u8)&1)).try_into().unwrap()
+           std::mem::transmute((v&0b111)^((face as u8)&1))
         }
     }
+
     pub fn inverse(self) -> CenterMap  {
         let input = ((self.map&0xc0c0c0)>>3) as u32;
         let output = 
@@ -142,20 +96,5 @@ impl CenterMap {
             ((0b1000_0000|((self.map>>16)&0b10_0000)).wrapping_shl(input >> 16));
         CenterMap{map: output}
     }
-    // fn tilemap(self) -> TileMap {
-    //     let mut tilemap = TileMap::default();
-    //     //todo refact with get and opposite to avoid bound check on array
-    //     let a = ((self.map>>5)&0b111) as usize;
-    //     tilemap.map[a][4] = Some(Face::Up);
-    //     tilemap.map[a^1][4] = Some(Face::Down);
-
-    //     let b = ((self.map>>(5+8))&0b111) as usize;
-    //     tilemap.map[b][4] = Some(Face::Front);
-    //     tilemap.map[b^1][4] = Some(Face::Back);
-        
-    //     let c = ((self.map>>(5+16))&0b111) as usize;
-    //     tilemap.map[c][4] = Some(Face::Right);
-    //     tilemap.map[c^1][4] = Some(Face::Left);
-    //     tilemap
-    // }
 }
+

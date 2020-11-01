@@ -85,7 +85,7 @@ pub struct CornerMap {
 
 impl Default for CornerMap {
     fn default() -> CornerMap {
-        CornerMap::identity()
+        CornerMap{set: 0x0706050403020100}
     }
 }
 impl std::fmt::Debug for CornerMap {
@@ -98,9 +98,6 @@ impl std::fmt::Debug for CornerMap {
 }
 
 impl CornerMap {
-    pub fn identity() -> CornerMap {
-        CornerMap{set: 0x0706050403020100}
-    }
     pub fn tilemap(self) -> TileMap {
         self.into()
     }
@@ -321,42 +318,15 @@ pub fn map_inv_mul(a:u64, b: u64) -> u64 {
     ret
 }
 use std::ops::{ Mul,MulAssign };
-use crate::Move;
 
-impl Mul<Move> for CornerMap {
-    type Output = Self;
-    fn mul(self, rhs: Move) -> Self {
-        self * rhs.corners()
-    }
-}
-
-impl MulAssign<Move> for CornerMap {
-    fn mul_assign(&mut self, rhs: Move) {
-        *self *= rhs.corners();
-    }
-}
-
-impl Mul<FaceMove> for CornerMap {
-    type Output = Self;
-    fn mul(self, mv: FaceMove) -> Self {
-        self * mv.corners()
-    }
-}
-
-impl MulAssign<FaceMove> for CornerMap {
-    fn mul_assign(&mut self, rhs: FaceMove) {
-        *self = *self * rhs;
-    }
-}
-
-impl Mul for CornerMap {
+impl std::ops::Mul for CornerMap {
     type Output = Self;
     fn mul(self, rhs: Self) -> Self {
         self.multiply(rhs)
     }
 }
 
-impl MulAssign for CornerMap {
+impl std::ops::MulAssign for CornerMap {
     fn mul_assign(&mut self, rhs: Self){
         *self = self.multiply(rhs);
     }

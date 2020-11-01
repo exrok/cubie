@@ -55,15 +55,11 @@ impl From<EdgeMap> for TileMap {
         tilemap
     }
 }
-const FACEMAP: [Face;6] = [
-    Face::Up,
-    Face::Down,
-    Face::Front,
-    Face::Back,
-    Face::Right,
-    Face::Left,
-]; 
+
 impl TileMap {
+    pub fn as_array(&self) -> &[Option<Face>;54] {
+        unsafe {std::mem::transmute(& self.map)}
+    }
 /// Render a 3d picture of the cube using VT escape codes on a compatible 256-color terminal.
 ///
 /// By default, `Front` is <span style="border-bottom:2px solid  #ff0000;">red</span> ,

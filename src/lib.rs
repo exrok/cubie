@@ -2,6 +2,7 @@
 pub mod cube;
 pub mod tile;
 pub mod moves;
+pub mod group;
 
 #[doc(inline)]
 pub use moves::FaceMove;
