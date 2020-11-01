@@ -1,11 +1,11 @@
-use crate::{CornerMap,EdgeMap,FaceMove,TileMap};
 use crate::cube::center::CenterMap;
 use crate::Move;
-use std::ops::{ Mul,MulAssign };
+use crate::{CornerMap, EdgeMap, FaceMove, TileMap};
+use std::ops::{Mul, MulAssign};
 
 pub mod center;
-pub mod edge;
 pub mod corner;
+pub mod edge;
 mod fixed_centers_cube;
 pub use self::fixed_centers_cube::FixedCentersCube;
 
@@ -13,18 +13,24 @@ pub use self::fixed_centers_cube::FixedCentersCube;
 /// cube to optimize for size.
 #[derive(Clone, Copy, Eq, PartialEq, Hash)]
 struct CenteredCornerMap {
-    pub raw: u64
+    pub raw: u64,
 }
 
 impl CenteredCornerMap {
     fn new(centers: CenterMap, corners: CornerMap) -> CenteredCornerMap {
-        CenteredCornerMap{raw: centers.map | corners.set}
+        CenteredCornerMap {
+            raw: centers.map | corners.set,
+        }
     }
     fn corners(self) -> CornerMap {
-        CornerMap{set: self.raw & 0x1f1f1f1f_1f1f1f1f }
+        CornerMap {
+            set: self.raw & 0x1f1f1f1f_1f1f1f1f,
+        }
     }
     fn centers(self) -> CenterMap {
-        CenterMap{map: self.raw & 0xe0e0e0}
+        CenterMap {
+            map: self.raw & 0xe0e0e0,
+        }
     }
 }
 
@@ -35,36 +41,31 @@ pub struct Cube {
     edges: EdgeMap,
 }
 
-
 impl Default for Cube {
     fn default() -> Cube {
         Cube {
-            centered_corners: CenteredCornerMap::new(
-                CenterMap::default(), CornerMap::default()
-            ),
-            edges: EdgeMap::default()
+            centered_corners: CenteredCornerMap::new(CenterMap::default(), CornerMap::default()),
+            edges: EdgeMap::default(),
         }
     }
 }
 
 impl Cube {
     pub(crate) const fn from_raw(centered_corners: u64, edges: u64) -> Cube {
-        Cube{
-            centered_corners: CenteredCornerMap{
-                raw: centered_corners 
+        Cube {
+            centered_corners: CenteredCornerMap {
+                raw: centered_corners,
             },
-            edges: EdgeMap{
-                set: edges
-            },
+            edges: EdgeMap { set: edges },
         }
     }
     pub fn inverse_multiply(self, rhs: Cube) -> Cube {
         Cube {
             centered_corners: CenteredCornerMap::new(
                 self.centers().inverse_multiply(rhs.centers()),
-                self.corners().inverse_multiply(rhs.corners())
+                self.corners().inverse_multiply(rhs.corners()),
             ),
-            edges: self.edges.inverse_multiply(rhs.edges)
+            edges: self.edges.inverse_multiply(rhs.edges),
         }
     }
     pub fn inverse(self) -> Cube {
@@ -73,7 +74,7 @@ impl Cube {
                 self.centers().inverse(),
                 self.corners().inverse(),
             ),
-            edges: self.edges.inverse()
+            edges: self.edges.inverse(),
         }
     }
     pub fn tilemap(self) -> TileMap {
@@ -89,54 +90,49 @@ impl Cube {
         self.centered_corners.centers()
     }
     pub fn is_solved(self) -> bool {
-        self == crate::moves::ROTATION_TABLE[self.centers().index() as usize] 
+        self == crate::moves::ROTATION_TABLE[self.centers().index() as usize]
     }
 }
 
 impl std::fmt::Debug for Cube {
-   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-       f.debug_struct("Cube")
-           .field("centers", &self.centers())
-           .field("corners", &self.corners())
-           .field("edges", &self.edges)
-           .finish()
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Cube")
+            .field("centers", &self.centers())
+            .field("corners", &self.corners())
+            .field("edges", &self.edges)
+            .finish()
     }
 }
-
 
 impl Mul for Cube {
     type Output = Self;
     fn mul(self, cube: Self) -> Self {
-        Cube{
+        Cube {
             centered_corners: CenteredCornerMap::new(
                 self.centers() * cube.centers(),
-                self.corners() * cube.corners()
+                self.corners() * cube.corners(),
             ),
-            edges: self.edges*cube.edges,
+            edges: self.edges * cube.edges,
         }
     }
 }
 
 impl MulAssign for Cube {
-    fn mul_assign(&mut self, cube: Self)  {
+    fn mul_assign(&mut self, cube: Self) {
         self.centered_corners = CenteredCornerMap::new(
             self.centers() * cube.centers(),
-            self.corners() * cube.corners()
+            self.corners() * cube.corners(),
         );
-        self.edges*=cube.edges;
+        self.edges *= cube.edges;
     }
 }
-
-
 
 impl MulAssign<FaceMove> for Cube {
     #[inline]
     fn mul_assign(&mut self, mv: FaceMove) {
-        self.centered_corners = CenteredCornerMap::new(
-            self.centers(),
-            self.corners() * mv.corners()
-        );
-        self.edges*=mv.edges();
+        self.centered_corners =
+            CenteredCornerMap::new(self.centers(), self.corners() * mv.corners());
+        self.edges *= mv.edges();
     }
 }
 
@@ -144,16 +140,12 @@ impl Mul<FaceMove> for Cube {
     type Output = Self;
     #[inline]
     fn mul(self, mv: FaceMove) -> Self {
-        Cube{
-            centered_corners: CenteredCornerMap::new(
-                self.centers(),
-                self.corners() * mv.corners()
-            ),
-            edges: self.edges*mv.edges(),
+        Cube {
+            centered_corners: CenteredCornerMap::new(self.centers(), self.corners() * mv.corners()),
+            edges: self.edges * mv.edges(),
         }
     }
 }
-
 
 impl MulAssign<Move> for Cube {
     #[inline]
@@ -173,17 +165,14 @@ impl Mul<Move> for Cube {
 impl From<FixedCentersCube> for Cube {
     fn from(cube: FixedCentersCube) -> Cube {
         Cube {
-            centered_corners: CenteredCornerMap::new(
-                CenterMap::default(),
-                cube.corners
-            ),
-            edges: cube.edges
+            centered_corners: CenteredCornerMap::new(CenterMap::default(), cube.corners),
+            edges: cube.edges,
         }
     }
 }
 
 impl From<Cube> for FixedCentersCube {
-    fn from(cube: Cube) ->FixedCentersCube {
+    fn from(cube: Cube) -> FixedCentersCube {
         let inv_rotation = cube.centers().inverse().cube();
 
         FixedCentersCube {
@@ -204,13 +193,23 @@ mod tests {
             two: Cube,
             ccw: Cube,
         }
-        fn extend_cw(mv: Move, cw: Cube) -> CubeGroup  {
+        fn extend_cw(mv: Move, cw: Cube) -> CubeGroup {
             assert_eq!(cw, mv.cw().cube(), "Failed Bootstrap: Move {:?}", mv.cw());
-            let two = cw*cw;
-            assert_eq!(two, mv.two().cube(), "Failed Bootstrap: Move {:?}", mv.two());
-            let ccw = two*cw;
-            assert_eq!(ccw, mv.ccw().cube(), "Failed Bootstrap: Move {:?}", mv.ccw());
-            CubeGroup{cw, two, ccw}
+            let two = cw * cw;
+            assert_eq!(
+                two,
+                mv.two().cube(),
+                "Failed Bootstrap: Move {:?}",
+                mv.two()
+            );
+            let ccw = two * cw;
+            assert_eq!(
+                ccw,
+                mv.ccw().cube(),
+                "Failed Bootstrap: Move {:?}",
+                mv.ccw()
+            );
+            CubeGroup { cw, two, ccw }
         }
         let u_cw = Move::Ucw.cube(); //generating set
         let y_cw = Move::Ycw.cube();
@@ -228,9 +227,37 @@ mod tests {
         let f = extend_cw(Move::Fcw, y.ccw * r.cw * y.cw);
 
         // and for fun and testing...
-        let d_ccw = r.two * l.two * u.cw * f.two * b.two * u.cw * f.two * r.two * f.two * b.two
-            * u.two * l.two * u.two * l.two * r.two * u.two * r.two * u.two * r.two * f.two * u.ccw
-            * r.two * b.two * r.two * l.two * f.two * l.two * u.cw * b.two * f.two * u.cw;
+        let d_ccw = r.two
+            * l.two
+            * u.cw
+            * f.two
+            * b.two
+            * u.cw
+            * f.two
+            * r.two
+            * f.two
+            * b.two
+            * u.two
+            * l.two
+            * u.two
+            * l.two
+            * r.two
+            * u.two
+            * r.two
+            * u.two
+            * r.two
+            * f.two
+            * u.ccw
+            * r.two
+            * b.two
+            * r.two
+            * l.two
+            * f.two
+            * l.two
+            * u.cw
+            * b.two
+            * f.two
+            * u.cw;
         let d = extend_cw(Move::Dcw, d_ccw * d_ccw * d_ccw);
 
         let e = extend_cw(Move::Ecw, y.ccw * u.cw * d.ccw);
@@ -251,9 +278,7 @@ mod tests {
     fn cube_is_direct_product() {
         use std::convert::TryFrom;
         let mut rng1 = oorandom::Rand32::new(0xdeadbeef);
-        let mut random_move = || -> Move {
-            Move::try_from((rng1.rand_u32()%36) as u8).unwrap()
-        };
+        let mut random_move = || -> Move { Move::try_from((rng1.rand_u32() % 36) as u8).unwrap() };
         let mut cube = Cube::default();
         let mut corners = CornerMap::default();
         let mut edges = EdgeMap::default();
@@ -265,9 +290,9 @@ mod tests {
             corners *= mv;
             edges *= mv;
             centers *= mv;
-            assert_eq!(cube.centers(),centers);
+            assert_eq!(cube.centers(), centers);
             assert_eq!(cube.edges(), edges);
-            assert_eq!(cube.corners(),corners);
+            assert_eq!(cube.corners(), corners);
         }
     }
 
@@ -275,36 +300,31 @@ mod tests {
     fn cube_inverse_multiply() {
         use std::convert::TryFrom;
         let mut rng1 = oorandom::Rand32::new(0xdeadbeef);
-        let mut random_move = || -> Move {
-            Move::try_from((rng1.rand_u32()%36) as u8).unwrap()
-        };
+        let mut random_move = || -> Move { Move::try_from((rng1.rand_u32() % 36) as u8).unwrap() };
         let mut x = Cube::default();
         for _ in 0..200 {
             x *= random_move();
-            assert!((x*x.inverse()).is_solved());
-            assert!((x.inverse()*x).is_solved());
+            assert!((x * x.inverse()).is_solved());
+            assert!((x.inverse() * x).is_solved());
             assert!((x.inverse_multiply(x)).is_solved());
             let mut y = Cube::default();
             for _ in 0..20 {
                 y *= random_move();
             }
-            assert_eq!(x.inverse()*y, x.inverse_multiply(y));
+            assert_eq!(x.inverse() * y, x.inverse_multiply(y));
         }
     }
 
     #[test]
     fn move_vs_facemove() {
-
         use std::convert::TryFrom;
         let mut rng1 = oorandom::Rand32::new(0xdeadbeef);
-        let mut random_move = || -> Move {
-            Move::try_from((rng1.rand_u32()%36) as u8).unwrap()
-        };
+        let mut random_move = || -> Move { Move::try_from((rng1.rand_u32() % 36) as u8).unwrap() };
         let mut cube = Cube::default();
         for _ in 0..20 {
             for fm in FaceMove::moves() {
-                assert_eq!(cube.corners()*fm, cube.corners()*Move::from(fm));
-                assert_eq!(cube.edges()*fm, cube.edges()*Move::from(fm));
+                assert_eq!(cube.corners() * fm, cube.corners() * Move::from(fm));
+                assert_eq!(cube.edges() * fm, cube.edges() * Move::from(fm));
             }
             cube *= random_move();
         }
@@ -314,21 +334,20 @@ mod tests {
         use std::convert::TryFrom;
         let mut rng1 = oorandom::Rand32::new(0xdeadbeef);
         let mut rng2 = oorandom::Rand32::new(0xeeff2101);
-        let mut random_rotation = || -> Move {
-            Move::try_from((rng1.rand_u32()%9 + 27) as u8).unwrap()
-        };
-        let mut random_turn = || -> Move {
-            Move::try_from((rng2.rand_u32()%27) as u8).unwrap()
-        };
+        let mut random_rotation =
+            || -> Move { Move::try_from((rng1.rand_u32() % 9 + 27) as u8).unwrap() };
+        let mut random_turn = || -> Move { Move::try_from((rng2.rand_u32() % 27) as u8).unwrap() };
         let mut cube = Cube::default();
         let mut bitset = 0u32;
         for _ in 0..500 {
             assert!(cube.is_solved());
-            bitset |= 1 << cube.centers().index(); 
+            bitset |= 1 << cube.centers().index();
             cube *= random_rotation();
-            assert!((cube*random_turn()).is_solved() == false);
+            assert!((cube * random_turn()).is_solved() == false);
         }
-        assert!(bitset.count_ones() == 24,
-                "Not all rotations checked, try increasing iteration count.") 
+        assert!(
+            bitset.count_ones() == 24,
+            "Not all rotations checked, try increasing iteration count."
+        )
     }
 }
