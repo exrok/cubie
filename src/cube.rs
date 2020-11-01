@@ -1,34 +1,78 @@
+use crate::{CornerMap,EdgeMap,FaceMove,TileMap};
+use crate::cube::center::CenterMap;
+use crate::Move;
+use std::ops::{ Mul,MulAssign };
+
 pub mod center;
 pub mod edge;
 pub mod corner;
+mod fixed_centers_cube;
+pub use self::fixed_centers_cube::FixedCentersCube;
 
-use crate::{CornerMap,EdgeMap,FaceMove,TileMap};
-use crate::cube::center::CenteredCornerMap;
-use crate::cube::center::CenterMap;
-use crate::Move;
+/// Stores both the centers and corners in a single u64. Used in
+/// cube to optimize for size.
+#[derive(Clone, Copy, Eq, PartialEq, Hash)]
+struct CenteredCornerMap {
+    pub raw: u64
+}
+
+impl CenteredCornerMap {
+    fn new(centers: CenterMap, corners: CornerMap) -> CenteredCornerMap {
+        CenteredCornerMap{raw: centers.map | corners.set}
+    }
+    fn corners(self) -> CornerMap {
+        CornerMap{set: self.raw & 0x1f1f1f1f_1f1f1f1f }
+    }
+    fn centers(self) -> CenterMap {
+        CenterMap{map: self.raw & 0xe0e0e0}
+    }
+}
+
 /// 3x3 Puzzle Cube
-#[derive(Default,Clone,Copy,PartialEq,Eq,Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Cube {
-    pub centered_corners: CenteredCornerMap,
-    pub edges: EdgeMap,
+    centered_corners: CenteredCornerMap,
+    edges: EdgeMap,
+}
+
+
+impl Default for Cube {
+    fn default() -> Cube {
+        Cube {
+            centered_corners: CenteredCornerMap::new(
+                CenterMap::default(), CornerMap::default()
+            ),
+            edges: EdgeMap::default()
+        }
+    }
 }
 
 impl Cube {
+    pub(crate) const fn from_raw(centered_corners: u64, edges: u64) -> Cube {
+        Cube{
+            centered_corners: CenteredCornerMap{
+                raw: centered_corners 
+            },
+            edges: EdgeMap{
+                set: edges
+            },
+        }
+    }
     pub fn inverse_multiply(self, rhs: Cube) -> Cube {
         Cube {
-            centered_corners: CenteredCornerMap{raw:
-                self.corners().inverse_multiply(rhs.corners()).set |
-                self.centers().inverse_multiply(rhs.centers()).map 
-            },
+            centered_corners: CenteredCornerMap::new(
+                self.centers().inverse_multiply(rhs.centers()),
+                self.corners().inverse_multiply(rhs.corners())
+            ),
             edges: self.edges.inverse_multiply(rhs.edges)
         }
     }
     pub fn inverse(self) -> Cube {
         Cube {
-            centered_corners: CenteredCornerMap{raw:
-                self.corners().inverse().set |
-                self.centers().inverse().map 
-            },
+            centered_corners: CenteredCornerMap::new(
+                self.centers().inverse(),
+                self.corners().inverse(),
+            ),
             edges: self.edges.inverse()
         }
     }
@@ -48,6 +92,7 @@ impl Cube {
         self == crate::moves::ROTATION_TABLE[self.centers().index() as usize] 
     }
 }
+
 impl std::fmt::Debug for Cube {
    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
        f.debug_struct("Cube")
@@ -57,114 +102,94 @@ impl std::fmt::Debug for Cube {
            .finish()
     }
 }
-impl From<FixedCentersCube> for Cube {
-    fn from(cube: FixedCentersCube) ->Cube {
-        Cube{
-            centered_corners: cube.corners.into(),
-            edges: cube.edges
-        }
-    }
-}
-impl Mul for Cube {
-    // The multiplication of rational numbers is a closed operation.
 
+
+impl Mul for Cube {
     type Output = Self;
     fn mul(self, cube: Self) -> Self {
         Cube{
-            centered_corners: self.centered_corners*cube.centered_corners,
+            centered_corners: CenteredCornerMap::new(
+                self.centers() * cube.centers(),
+                self.corners() * cube.corners()
+            ),
             edges: self.edges*cube.edges,
         }
     }
 }
 
 impl MulAssign for Cube {
-    // The multiplication of rational numbers is a closed operation.
-
     fn mul_assign(&mut self, cube: Self)  {
-        self.centered_corners = self.centered_corners*cube.centered_corners;
+        self.centered_corners = CenteredCornerMap::new(
+            self.centers() * cube.centers(),
+            self.corners() * cube.corners()
+        );
         self.edges*=cube.edges;
-        // Cube{
-        //     centered_corners: self.centered_corners*cube.centered_corners,
-        //     edges: self.edges*cube.edges,
-        // }
     }
 }
 
-impl MulAssign<Move> for Cube {
-    // The multiplication of rational numbers is a closed operation.
 
+
+impl MulAssign<FaceMove> for Cube {
+    #[inline]
+    fn mul_assign(&mut self, mv: FaceMove) {
+        self.centered_corners = CenteredCornerMap::new(
+            self.centers(),
+            self.corners() * mv.corners()
+        );
+        self.edges*=mv.edges();
+    }
+}
+
+impl Mul<FaceMove> for Cube {
+    type Output = Self;
+    #[inline]
+    fn mul(self, mv: FaceMove) -> Self {
+        Cube{
+            centered_corners: CenteredCornerMap::new(
+                self.centers(),
+                self.corners() * mv.corners()
+            ),
+            edges: self.edges*mv.edges(),
+        }
+    }
+}
+
+
+impl MulAssign<Move> for Cube {
+    #[inline]
     fn mul_assign(&mut self, mv: Move) {
         *self *= Cube::from(mv);
     }
 }
-impl Mul<Move> for Cube {
-    // The multiplication of rational numbers is a closed operation.
 
+impl Mul<Move> for Cube {
     type Output = Self;
+    #[inline]
     fn mul(self, mv: Move) -> Self {
         self * Cube::from(mv)
     }
 }
 
+impl From<FixedCentersCube> for Cube {
+    fn from(cube: FixedCentersCube) -> Cube {
+        Cube {
+            centered_corners: CenteredCornerMap::new(
+                CenterMap::default(),
+                cube.corners
+            ),
+            edges: cube.edges
+        }
+    }
+}
 
-/// 3x3 Puzzle Cube, with centers fixed in space.
-#[derive(Default,Clone,Copy,PartialEq,Eq,Hash,Debug)]
-pub struct FixedCentersCube {
-    pub corners: CornerMap,
-    pub edges: EdgeMap,
-}
-impl FixedCentersCube {
-    pub fn is_solved(&self) ->bool {
-        self.corners.is_solved() && self.edges.is_solved() 
-    }
-    pub fn tilemap(self) -> TileMap {
-        self.into()
-    }
-}
-impl From<FaceMove> for FixedCentersCube {
-    fn from(turn: FaceMove) ->FixedCentersCube {
+impl From<Cube> for FixedCentersCube {
+    fn from(cube: Cube) ->FixedCentersCube {
+        let inv_rotation = cube.centers().inverse().cube();
+
         FixedCentersCube {
-            corners: turn.into(),
-            edges: turn.into(),
+            corners: cube.corners() * inv_rotation.corners(),
+            edges: cube.edges() * inv_rotation.edges(),
         }
-    }
-}
-
-use std::ops::{ Mul,MulAssign };
-
-impl Mul<FaceMove> for FixedCentersCube {
-    type Output = Self;
-    #[inline]
-    fn mul(self, turn: FaceMove) -> Self {
-        FixedCentersCube{
-            corners: self.corners*turn,
-            edges: self.edges*turn,
-        }
-    }
-}
-
-impl MulAssign<FaceMove> for FixedCentersCube {
-    #[inline]
-    fn mul_assign(&mut self, turn: FaceMove) {
-        self.corners *= turn;
-        self.edges *= turn;
-    }
-}
-impl Mul for FixedCentersCube {
-    // The multiplication of rational numbers is a closed operation.
-
-    type Output = Self;
-    fn mul(self, cube: Self) -> Self {
-        FixedCentersCube{
-            corners: self.corners*cube.corners,
-            edges: self.edges*cube.edges,
-        }
-    }
-}
-impl MulAssign for FixedCentersCube {
-    fn mul_assign(&mut self, cube: Self){
-        self.corners *= cube.corners;
-        self.edges *= cube.edges;
     }
 }
 
@@ -204,8 +229,8 @@ mod tests {
 
         // and for fun and testing...
         let d_ccw = r.two * l.two * u.cw * f.two * b.two * u.cw * f.two * r.two * f.two * b.two
-            * u.two * l.two * u.two * l.two * r.two * u.two * r.two * u.two * r.two * f.two * u.ccw * 
-            r.two * b.two * r.two * l.two * f.two * l.two * u.cw * b.two * f.two * u.cw;
+            * u.two * l.two * u.two * l.two * r.two * u.two * r.two * u.two * r.two * f.two * u.ccw
+            * r.two * b.two * r.two * l.two * f.two * l.two * u.cw * b.two * f.two * u.cw;
         let d = extend_cw(Move::Dcw, d_ccw * d_ccw * d_ccw);
 
         let e = extend_cw(Move::Ecw, y.ccw * u.cw * d.ccw);
@@ -306,5 +331,4 @@ mod tests {
         assert!(bitset.count_ones() == 24,
                 "Not all rotations checked, try increasing iteration count.") 
     }
-
 }
