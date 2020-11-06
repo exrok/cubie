@@ -44,7 +44,7 @@ impl std::convert::From<u8> for Corner {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq,Eq)]
 #[repr(u8)]
 pub enum Twist {
     //
@@ -53,6 +53,15 @@ pub enum Twist {
     Ccw,
 }
 impl Twist {
+    pub fn is_identity(self) -> bool {
+        self == Twist::Identity
+    }
+    pub fn is_ccw(self) -> bool {
+        self == Twist::Ccw
+    }
+    pub fn is_cw(self) -> bool {
+        self == Twist::Cw
+    }
     pub fn inverse(self) -> Twist {
         (&[Twist::Identity, Twist::Ccw, Twist::Cw])[self as usize]
     }
@@ -122,6 +131,30 @@ impl CornerMap {
         } else {
             None
         }
+        
+    }
+    pub fn permutation_parity(self) -> bool {
+        let mut transc = false;
+        { // WALK edge permutation in discrete cycle form
+            let mut rem =  0b1111_1110u32;
+            let mut at = Corner::URF;
+            // print!("({:?}", at)
+            while rem != 0 {
+                at = self.get(at).0;
+                let bit = 1u32 << (at as u8);
+                if rem & bit != 0 {
+                    rem ^= bit;
+                    transc ^= true;
+                    // print!(" {:?}", at);
+                    continue;
+                }
+                at = unsafe{std::mem::transmute(rem.trailing_zeros() as u8)};
+                rem ^= 1u32 << (at as u8);
+                // print!(")({:?}", at);
+            }
+            // println!(")");
+        }
+        transc
     }
     pub fn from_slice(map: &[(Corner, (Corner, Twist))]) -> Option<CornerMap> {
         CornerMap::from_iter(map.iter().cloned())
@@ -256,25 +289,39 @@ impl CornerMap {
             + (((x_cmp + (x & section(5)).wrapping_mul(dist)) & s_mask).count_ones() * 1))
             as u64
     }
+
+    pub fn orientation_residue(self) -> Twist {
+        let res = ((((self.set&0x1818_1818_1818_1818)
+        ).wrapping_mul(0x01010101_01010101))>>57) as u8;
+        unsafe { transmute((res ) % 3) }
+    }
     pub fn index(self) -> u64 {
+
         self.permutation_index() + self.orientation_index() * 40320
     }
+
     pub fn is_solved(self) -> bool {
         self == CornerMap::default()
     }
+
+    /// Returns true if the Map represents a well-defined permutation in range.
+    /// In safe user code this should ALWAYS return true. A valid cube may still 
+    /// be unsolvable.
     pub fn is_valid(self) -> bool {
         // TODO: handled embeded center_map
-        // if (self.set & 0xe0e0e0e0_e0e0e0e0) != 0 { // extra bits
-        //     return false;
-        // }
-        let mut corners_mask = 0;
-        let mut twist_sum = 0;
-        for (_, (corner, twist)) in self.iter() {
-            corners_mask |= 1 << (corner as u32);
-            twist_sum += twist as u32;
+        if (self.set & 0xe0e0e0e0_e0e0e0e0) != 0 { 
+            return false; // extra bits
         }
-        corners_mask == 0b1111_1111 && //All corners appear exactly once
-            twist_sum%3 == 0
+        if (self.set & (self.set >> 1) & 0x08_08_08_08_08_08_08_08) != 0 { 
+            return false; // orientation out of range
+        }
+        // cannot use CornerMap::iter since it assumes validity
+        let mut corners_mask = 0u32;
+        for i in 0..8 {
+            let v = (self.set >> (i*8))&0b111;
+            corners_mask |= 1 << v;
+        }
+        corners_mask == 0b1111_1111  //All corners appear exactly once
     }
 }
 

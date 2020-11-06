@@ -5,6 +5,8 @@ pub mod moves;
 pub mod tile;
 
 #[doc(inline)]
+pub use cube::corner::Twist;
+#[doc(inline)]
 pub use moves::FaceMove;
 #[doc(inline)]
 pub use moves::Move;
@@ -56,6 +58,11 @@ impl Face {
     /// An iterator of the 6 faces.
     pub fn faces() -> impl Iterator<Item = Face> {
         unsafe { (0..6u8).map(|t| mem::transmute(t)) }
+    }
+
+    /// The face on the opposite of the cube
+    pub fn is_reverse(self) -> bool {
+        self as u8 & 1 == 1
     }
 
     /// The face on the opposite of the cube

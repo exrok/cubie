@@ -19,7 +19,7 @@ struct CenteredCornerMap {
 impl CenteredCornerMap {
     fn new(centers: CenterMap, corners: CornerMap) -> CenteredCornerMap {
         CenteredCornerMap {
-            raw: centers.map | corners.set,
+            raw: centers.raw | corners.set,
         }
     }
     fn corners(self) -> CornerMap {
@@ -29,7 +29,7 @@ impl CenteredCornerMap {
     }
     fn centers(self) -> CenterMap {
         CenterMap {
-            map: self.raw & 0xe0e0e0,
+            raw: self.raw & 0xe0e0e0,
         }
     }
 }
@@ -88,6 +88,17 @@ impl Cube {
     }
     pub fn centers(&self) -> CenterMap {
         self.centered_corners.centers()
+    }
+
+    pub fn has_solution(self) -> bool  {
+        self.corners().orientation_residue().is_identity()
+            && self.edges().orientation_residue().is_identity()
+            && (self.edges.permutation_parity() ^
+                self.corners().permutation_parity() ^
+                self.centers().permutation_parity()) == false
+    }
+    pub fn is_valid(self) -> bool  {
+        self.corners().is_valid() && self.edges.is_valid() && self.centers().is_valid()
     }
     pub fn is_solved(self) -> bool {
         self == crate::moves::ROTATION_TABLE[self.centers().index() as usize]

@@ -11,6 +11,14 @@ pub enum Flip {
     Identity = 0,
     Flipped = 1,
 }
+impl Flip {
+    pub fn is_flipped(self) -> bool {
+        self == Flip::Flipped
+    }
+    pub fn is_identity(self) -> bool {
+        self == Flip::Identity
+    }
+}
 
 /// An edge piece on the 3x3 cube, characterized by the faces of the two adjacent centres.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -213,6 +221,61 @@ impl EdgeMap {
         }
     }
 
+    pub fn orientation_residue(self) -> Flip {
+        //TODO optimized
+        let mut flip_parity = 0;  
+        for (_, (edge, flip)) in self.iter() {
+            flip_parity ^= flip as u32;
+        }
+        if flip_parity == 0 {
+            Flip::Identity
+        } else {
+            Flip::Flipped
+        }
+    }
+    pub fn is_valid(self) -> bool {
+        let mut edge_mask = 0;
+        let mut flip_sum = 0;
+        for (_, (edge, flip)) in self.iter() {
+            edge_mask |= 1 << (edge as u32);
+            flip_sum ^= flip as u32;
+        }
+        edge_mask == 0b1111_1111_1111 && //All corners appear exactly once
+            flip_sum == 0
+    }
+    pub fn permutation_parity(self) -> bool {
+        let mut transc = false;
+        { // WALK edge permutation in discrete cycle form
+            let mut rem =  0b1111_1111_1110u32;
+            let mut at = Edge::LU;
+            // print!("({:?}", at);
+            while rem != 0 {
+                at = self.get(at).0;
+                let bit = 1u32 << (at as u8);
+                if rem & bit != 0 {
+                    rem ^= bit;
+                    transc ^= true;
+                    // print!(" {:?}", at);
+                    continue;
+                }
+                at = unsafe{std::mem::transmute(rem.trailing_zeros() as u8)};
+                rem ^= 1u32 << (at as u8);
+                // print!(")({:?}", at);
+            }
+            // println!(")");
+        }
+        transc
+    }
+    pub fn permutation_index(self) -> usize {
+        let mut idx = 0;
+        let mut val = 0xFEDCBA9876543210u64;
+        for (edge,(pos,_)) in self.iter().take(11) {
+            let v = (pos as u8) << 2;
+            idx = (12 - edge as u32)*idx + ((val >> v) & 0xf) as u32;
+            val -= 0x1111111111111110 << v;
+        }
+        return idx as usize;
+    }
     pub fn is_solved(self) -> bool {
         self == EdgeMap::default()
     }

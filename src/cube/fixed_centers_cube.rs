@@ -1,4 +1,4 @@
-use crate::{CornerMap, EdgeMap, FaceMove, TileMap};
+use crate::{CornerMap, EdgeMap, FaceMove, TileMap,Edge,Corner};
 
 use std::ops::{Mul, MulAssign};
 /// 3x3 Puzzle Cube, with centers fixed in space.
@@ -16,7 +16,14 @@ impl FixedCentersCube {
     pub fn edges(self) -> EdgeMap {
         self.edges
     }
-
+    pub fn has_solution(self) -> bool  {
+        self.edges.permutation_parity() == self.corners.permutation_parity() &&
+            self.edges.orientation_residue().is_identity()&&
+            self.corners.orientation_residue().is_identity()
+    }
+    pub fn is_valid(self) -> bool  {
+        self.corners.is_valid() && self.edges.is_valid()
+    }
     #[inline]
     pub fn inverse(self) -> FixedCentersCube {
         FixedCentersCube {

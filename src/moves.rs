@@ -148,12 +148,32 @@ impl From<Move> for CornerMap {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq,Debug)]
 #[repr(u8)]
 pub enum MoveAngle {
     Cw,
     Two,
     Ccw,
+}
+impl MoveAngle {
+    pub fn radians(self) -> f32 {
+        use std::f32::consts::PI;
+        match self  {
+            MoveAngle::Cw => -PI/2.0,
+            MoveAngle::Two => -PI,
+            MoveAngle::Ccw => PI/2.0
+        }
+    }
+
+}
+
+
+#[derive(Copy, Clone, PartialEq, Eq,Debug)]
+#[repr(u8)]
+pub enum MoveKind {
+    Face,
+    Slice,
+    Rotation,
 }
 
 impl Move {
@@ -161,43 +181,80 @@ impl Move {
     pub fn len() -> u8 {
         36
     }
+    pub fn new(kind: MoveKind, face: Face, angle: MoveAngle) -> Move {
+        use Move::*;
+        match kind {
+            MoveKind::Face => FaceMove::new(face,angle).into(),
+            MoveKind::Rotation => {
+                // let rotation = 27 + ((face as u8)>>1)*3 + angle as u8;
+                // let mv:Move = unsafe{ mem::transmute(rotation)};
+                // if face.is_reverse()  {
+                //     mv.inverse()
+                // } else {
+                //     mv
+                // }
+                let map:&[Move;18] = &[
+                    Ycw, Y2, Yccw, Yccw, Y2, Ycw,//
+                    Zcw, Z2, Zccw, Zccw, Z2, Zcw,//
+                    Xcw, X2, Xccw, Xccw, X2, Xcw,//
+                ];
+                // Safety: Face <= 5, Angle <= 3 thus face+3*angle<=18.
+                unsafe{
+                    *map.get_unchecked(face as usize*3+angle as usize)
+                }
+            },
+            MoveKind::Slice => {
+                // let rotation = 18 + (((face as u8)>> 1)*3) + angle as u8;
+                // let mv:Move = unsafe{ mem::transmute(rotation) };
+                // let x = (face as u8) >>1;
+                // if ((face as u8) ^ (0b1_01 >> x))&1 == 1 {
+                //     mv.inverse()
+                // } else {
+                //     mv
+                // }
+                let map: &[Move;18] = &[
+                    Eccw, E2, Ecw, Ecw, E2, Eccw,//
+                    Scw, S2, Sccw, Sccw, S2, Scw,//
+                    Mccw, M2, Mcw, Mcw, M2, Mccw //
+                ];
+
+                // Safety: Face <= 5, Angle <= 3 thus face+3*angle<=18.
+                unsafe{
+                    *map.get_unchecked(face as usize*3+angle as usize)
+                }
+            }
+        }
+    }
+    pub fn face(self) -> Face {
+        use Face::*;
+        (&[Up,Down,Front,
+           Back,Right,Left,
+           Down,Front,Left,
+           Up,Front,Right])[self as usize /3]
+    }
+    pub fn kind(self) -> MoveKind {
+// MoveKind::Face
+        (&[MoveKind::Face,MoveKind::Face,MoveKind::Slice,MoveKind::Rotation])[self as usize /9]
+    }
     // An iterator over all the `Turn` variants.
     pub fn moves() -> impl Iterator<Item = Move> {
         unsafe { (0..36u8).map(|t| mem::transmute(t)) }
     }
-
     pub fn projection(self, centers: CenterMap) -> Move {
-        //todo make this safe;
-        let mv = self;
-        let mvi = mv as u8;
-        if mvi < 18 {
-            let face = centers.get(Face::try_from(mvi / 3).unwrap());
-            ((face as u8 * 3) + ((mv as u8) % 3)).try_into().unwrap()
-        } else {
-            // Slice moves are annoying as ..
-            // E-slice and M-slice are backwards thus it is over complementated
-            // to deal with them.
-            let offset = ((mvi - 18) / 9) * 9 + 18;
-            let face = centers.get(Face::try_from(((mvi / 3) % 3) * 2).unwrap());
-            dbg!(face);
-            let face = face as u8;
-            let reversed = (face as u64) & 0b1;
-            let face = face / 2;
-            let mut target: Move = ((face * 3) + ((mv as u8) % 3) + offset).try_into().unwrap();
-            let inv: u64 = (1 << (Move::Mcw as u8))
-                | (1 << (Move::Mccw as u8))
-                | (1 << (Move::Ecw as u8))
-                | (1 << (Move::Eccw as u8));
-            if ((reversed ^ (inv >> (target as u8)) ^ (inv >> (mv as u8))) & 0b1) == 1 {
-                target = target.inverse()
-            }
-            target
-        }
+        Move::new(self.kind(), centers.get(self.face()), self.angle())
     }
+
     pub fn angle(self) -> MoveAngle {
         let v = self as u8;
         unsafe { mem::transmute(v % 3) }
     }
+
+    #[inline]
+    pub fn set_angle(self, angle:MoveAngle) -> Move {
+        let v = self as u8;
+        unsafe { mem::transmute((angle as u8) + v - (v % 3)) }
+    }
+
     /// Counter clockwise Face of the `self` face.     
     #[inline]
     pub fn ccw(self) -> Move {
@@ -208,34 +265,41 @@ impl Move {
     pub fn pow(self) -> u8 {
         self as u8 % 3
     }
+
     /// Double turn of the `self` face.     
     #[inline]
     pub fn two(self) -> Move {
         let v = self as u8;
         unsafe { mem::transmute(1 + v - (v % 3)) }
     }
+
     /// Clockwise turn of the `self` face.     
     #[inline]
     pub fn cw(self) -> Move {
         let v = self as u8;
         unsafe { mem::transmute(v - (v % 3)) }
     }
+
     #[inline]
     pub fn centers(self) -> CenterMap {
         self.into()
     }
+
     #[inline]
     pub fn cube(self) -> Cube {
         self.into()
     }
+
     #[inline]
     pub fn corners(self) -> CornerMap {
         self.into()
     }
+
     #[inline]
     pub fn edges(self) -> EdgeMap {
         self.into()
     }
+
     #[inline]
     pub fn inverse(self) -> Move {
         let v = self as u8;
@@ -243,19 +307,6 @@ impl Move {
         // (&[ Uccw, U2, Ucw, Dccw, D2, Dcw,Fccw, F2, Fcw,
         //     Bccw, B2, Bcw, Rccw, R2, Rcw, Lccw, L2, Lcw])[self as usize]
     }
-
-    // #[inline]
-    // pub fn fc_cube(self) -> FixedCenterCube {
-    //     self.into()
-    // }
-    // #[inline]
-    // pub fn corners(self) -> CornerMap {
-    //     self.into()
-    // }
-    // #[inline]
-    // pub fn edges(self) -> EdgeMap {
-    //     self.into()
-    // }
 }
 
 /// A `FaceMove` respect a move of a outer face on the cube and is a subset of `Move`.
@@ -309,6 +360,7 @@ impl std::convert::TryFrom<u8> for FaceMove {
         if value >= 18 {
             return Err("Value too large (>17).");
         } else {
+            // Safety: see above check, FaceMove is represented by u8 in 0..18.
             unsafe { Ok(mem::transmute(value)) }
         }
     }
@@ -316,6 +368,7 @@ impl std::convert::TryFrom<u8> for FaceMove {
 
 impl From<FaceMove> for Move {
     fn from(fm: FaceMove) -> Move {
+        // Safety: FaceMove (0..18) is a subset of Move (0..37).
         unsafe { mem::transmute(fm) }
     }
 }
@@ -324,13 +377,15 @@ impl FaceMove {
     pub fn new(face: Face, angle: MoveAngle) -> FaceMove {
         unsafe { mem::transmute((face as u8 * 3) + (angle as u8)) }
     }
-    // return the number of moves.
+
+    // Returns the number of moves variants in this enum, FaceMove.
     pub const fn len() -> u8 {
         18
     }
     pub fn projection(self, centers: CenterMap) -> FaceMove {
         FaceMove::new(centers.get(self.face()), self.angle())
     }
+
     pub fn angle(self) -> MoveAngle {
         let v = self as u8;
         unsafe { mem::transmute(v % 3) }
@@ -339,10 +394,10 @@ impl FaceMove {
     pub fn moves() -> impl Iterator<Item = FaceMove> {
         unsafe { (0..18u8).map(|t| mem::transmute(t)) }
     }
+
     #[inline]
     pub fn inverse(self) -> FaceMove {
         use FaceMove::*;
-        //unsafe{transmute(v.wrapping_add((v%3).wrapping_sub(1)*2))}
         (&[
             Uccw, U2, Ucw, Dccw, D2, Dcw, Fccw, F2, Fcw, Bccw, B2, Bcw, Rccw, R2, Rcw, Lccw, L2,
             Lcw,
@@ -428,6 +483,7 @@ impl_mul_assign!(FaceMove for CornerMap);
 
 impl_mul!(Move for CenterMap);
 impl_mul_assign!(Move for CenterMap);
+
 impl std::ops::Mul<FaceMove> for CenterMap {
     type Output = Self;
     #[inline]
@@ -447,6 +503,8 @@ mod tests {
     fn center_index_rotation_table() {
         for (index, cube) in ROTATION_TABLE.iter().enumerate() {
             assert_eq!(index, cube.centers().index() as usize);
+            assert_eq!(cube.corners().permutation_parity() ^ cube.edges().permutation_parity(),
+                       cube.centers().permutation_parity());
         }
     }
 
