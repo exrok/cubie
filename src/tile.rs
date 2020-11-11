@@ -403,6 +403,9 @@ impl TileMap {
     pub fn terminal_display(&self) -> impl fmt::Display + '_ {
         return TileMap3dFmt { fm: &self };
     }
+    pub fn svg_display(&self) -> impl fmt::Display + '_ {
+        return TileMapSvgFmt { fm: &self };
+    }
     pub fn store_identity_centers(&mut self) {
         for face in Face::faces() {
             self.map[face as usize][4] = Some(face);
@@ -514,6 +517,68 @@ impl fmt::Display for TileMap3dFmt<'_> {
     }
 }
 
+struct TileMapSvgFmt<'a> {
+    fm: &'a TileMap,
+}
+impl fmt::Display for TileMapSvgFmt<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let tile_paths = &[
+            ["M249 52c-6-4-5-7 0-11l63-30c8-3 15-2 22 0l63 30c6 4 6 7 1 11l-63 31c-8 3-16 3-23 0z", 
+             "M352 103c-6-4-5-8 0-11l63-32c8-3 15-2 23 0l65 32c6 3 6 7 1 11l-63 32c-8 4-15 3-23 0z", 
+             "M460 156c-6-3-6-8 0-12l62-32c8-4 16-3 23 0l68 32c7 4 7 8 2 12l-63 34c-9 3-16 2-24 0z",
+             "M143 103c-7-4-5-8 1-11l65-32c7-3 15-2 23 0l62 32c7 3 6 7 0 11l-65 32c-8 3-16 3-23 0z",
+             "M246 156c-6-4-5-8 0-12l66-32c8-4 15-3 23 0l65 32c6 4 6 8 1 12l-66 34c-8 3-16 3-24 0z",
+             "M354 211c-7-4-6-8 0-12l65-34c8-3 16-2 24 0l68 34c6 4 6 8 1 12l-66 36c-8 3-16 2-24 0z",
+             "M32 156c-6-4-4-8 1-12l68-32c8-4 16-3 24 0l62 32c7 4 5 8 0 12l-68 34c-8 3-16 3-24 0z",  
+             "M135 211c-6-4-4-8 1-12l68-34c8-3 16-3 24 0l65 34c7 4 6 8 0 12l-68 36c-8 3-16 2-25 0z",
+             "M243 269c-7-4-6-9 0-13l68-35c8-4 16-3 24 0l69 35c6 4 6 9 0 13l-68 37c-8 4-17 3-25 0z"],
+            ["M100 305c0 8-4 10-11 8l-61-35c-7-4-11-13-12-20l-3-78c0-8 3-10 10-8l63 33c7 5 10 12 11 21z",
+             "M205 364c-1 8-5 9-12 8l-64-36c-7-6-10-13-12-21l-2-80c0-7 4-10 11-8l65 35c8 5 11 13 12 22z",
+             "M314 425c-1 8-5 10-12 7l-67-37c-8-5-11-13-12-21l-1-81c0-7 4-10 11-8l68 37c8 5 11 13 13 22z",
+             "M104 431c0 7-4 9-10 7l-61-35c-7-5-10-12-11-20l-4-76c0-7 4-10 11-7l61 34c7 5 10 12 12 21z",
+             "M207 491c0 8-5 9-11 7l-63-37c-7-6-10-12-12-20l-2-77c0-7 4-9 11-7l64 36c7 5 10 12 12 21z",
+             "M314 554c-1 7-5 9-12 6l-65-38c-8-5-11-12-12-21l-2-77c1-8 5-10 12-8l67 38c7 5 11 13 12 21z",
+             "M108 552c0 7-4 9-10 7l-60-37c-7-5-10-11-11-19l-3-73c0-7 3-10 10-7l60 35c8 5 10 12 12 21z",
+             "M209 613c0 8-5 9-11 7l-62-38c-7-5-10-12-11-20l-2-74c0-7 4-9 10-7l63 37c7 6 11 13 12 21z",
+             "M314 677c-1 8-5 9-11 6l-65-39c-7-5-10-12-12-20l-1-75c1-7 5-9 12-6l65 38c8 5 11 13 12 21z"],
+            ["M424 374c-1 9-6 16-12 21l-67 37c-8 4-11 0-12-7v-81c1-10 5-17 12-22l68-37c8-3 11 2 12 8z",
+             "M529 315c0 9-5 15-11 21l-65 36c-7 2-10-1-11-8l1-80c1-9 5-16 12-22l66-35c7-3 10 2 11 8z",
+             "M631 258c-1 9-5 15-12 20l-62 35c-7 3-9-1-10-8l2-79c1-9 5-15 12-21l63-33c7-2 9 1 10 8z",
+             "M422 501c-1 9-5 16-12 21l-65 38c-8 4-11 1-12-6v-79c0-9 5-15 12-21l67-38c7-3 10 1 11 8z",
+             "M526 441c-1 8-6 15-12 20l-63 37c-7 3-10 0-11-7l1-77c1-9 5-16 12-21l64-36c7-3 10 0 11 7z",
+             "M625 383c-1 8-5 14-11 20l-61 35c-7 3-10-1-11-7l3-76c1-9 5-15 12-21l61-34c7-4 10 0 10 7z",
+             "M420 624c-1 8-5 15-12 20l-64 39c-7 4-10 1-12-6v-75c1-9 6-15 12-21l66-38c7-4 10-1 11 6z",
+             "M522 562c-1 8-5 15-11 20l-62 38c-7 3-10 0-11-7l1-74c0-9 5-15 12-21l62-37c7-3 10 1 11 7z",
+             "M620 503c-1 8-5 14-11 19l-60 37c-7 3-10 0-10-7l2-73c1-9 5-15 11-21l61-35c7-3 9 1 10 7z"]
+        ];
+
+        // By default, `Front` is <span style="border-bottom:2px solid  #ff0000;">red</span> ,
+    // `Back` is <span style="border-bottom:2px solid  #ffaf00;">orange</span>,
+    // `Up` is <span style="border-bottom:2px solid  #ffff00;">yellow</span>,
+    // `Down` is <span style="border-bottom:2px solid  #e4e4e4;">white</span>,
+    // `Right` is <span style="border-bottom:2px solid  #5fd700;">green</span> and
+    // `Left` is <span style="border-bottom:2px solid  #0087ff;">blue</span>.
+        let color_code = |a: &Option<Face>| match a {
+            Some(Face::Up) => "#ffff00",    // yellow
+            Some(Face::Down) => "#efefef",  // white
+            Some(Face::Front) => "#f00", // red
+            Some(Face::Back) => "#ffaf00",  // orange
+            Some(Face::Right) => "#5fd700",  // greeen
+            Some(Face::Left) => "#0088ff",   // blue
+            None => "#333",              // dark grey
+        };
+
+        f.write_str("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"645\" height=\"700\">")?;
+        let border_path = "M322 0c-15 0-27 9-40 15l-41 19c-11 4-4 23-17 16-17-3-31 8-46 14l-43 22c-12 4-4 23-18 15-17-3-31 8-46 14l-47 23c-10 9-18 15-22 30-2 10-1 26-1 38 1 20 1 39 3 58 0 10 12 22 14 26-12 4-13 17-12 28l3 69c-1 11 14 23 12 27-11 6-10 20-9 30l3 65c2 14 12 24 24 30l54 33c9 7 22-11 22 5 6 16 22 22 35 30l43 26c7 5 18-2 22-2 2 14 12 24 24 30 19 12 42 23 61 34 13 7 30 7 42 3l28-15 46-29c9-4 12-21 16-23 9 8 21 2 30-4l55-34c9-4 12-23 17-22 11 7 22-1 31-7l50-31c11-8 16-22 15-36l3-66c0-13-10-16-12-19 11-9 15-23 15-36l2-68c0-18-11-16-12-19 12-9 15-24 15-38l3-77c-4-30-29-37-50-49-16-7-32-16-48-22-9-5-24 0-28-2 1-14-13-18-23-23l-55-26c-8-6-25 1-28-3 0-14-15-17-25-23L335 2l-13-2z";
+        write!(f, "<path d=\"{}\" fill=\"{}\"/>", border_path, "#111")?;
+        for (paths, tiles) in tile_paths.iter().zip(self.fm.map.iter().step_by(2)) {
+            for (path, tile) in paths.iter().zip(tiles.iter()) {
+                writeln!(f, "<path d=\"{}\" fill=\"{}\"/>", path, color_code(tile))?;
+            }
+        }
+        f.write_str("</svg>")
+    }
+}
 
 #[cfg(test)]
 mod tests {
