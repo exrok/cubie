@@ -59,69 +59,69 @@ impl std::convert::TryFrom<u8> for Move {
 }
 
 pub static ROTATION_TABLE: &[Cube; 24] = &[
-    Cube::from_raw(0x12080E140B31B74D, 0x0394869C612DE71A), //
-    Cube::from_raw(0x140E08120D37916B, 0x029CC48CE50CEF58), //
-    Cube::from_raw(0x15090F130C10768A, 0x0ADE96D637984A33), //
-    Cube::from_raw(0x130F09150A1650AC, 0x0BD6D4C6B3B94271), //
-    Cube::from_raw(0x0607020304458021, 0x000C41ADAF45250B), //
-    Cube::from_raw(0x030207060140A504, 0x018022B56974A968), //
-    Cube::from_raw(0x0915100C136F0AB6, 0x09C2515A149BD2D5), //
-    Cube::from_raw(0x0C101509166A2F93, 0x084E3242D2AA5EB6), //
-    Cube::from_raw(0x170D0B110E149248, 0x0218E584A71C6B79), //
-    Cube::from_raw(0x110B0D170812B46E, 0x0310A794233D633B), //
-    Cube::from_raw(0x0F13160A15490C90, 0x08CA134A90BADA97), //
-    Cube::from_raw(0x0A16130F104C29B5, 0x09467052568B56F4), //
-    Cube::from_raw(0x0E14170D12882B51, 0x0C677A10C2039885), //
-    Cube::from_raw(0x0D17140E118B0872, 0x0CE35B1880131CA4), //
-    Cube::from_raw(0x0100030205A46706, 0x04A16A290E608062), //
-    Cube::from_raw(0x0203000106A74425, 0x04254B214C700443), //
-    Cube::from_raw(0x160A0C100F335589, 0x0A5AB7DE7588CE12), //
-    Cube::from_raw(0x100C0A16093573AF, 0x0B52F5CEF1A9C650), //
-    Cube::from_raw(0x0706050403824100, 0x05A928398A418820), //
-    Cube::from_raw(0x0405060700816223, 0x052D0931C8510C01), //
-    Cube::from_raw(0x0504010007668302, 0x008860A5ED55A12A), //
-    Cube::from_raw(0x000104050263A627, 0x010403BD2B642D49), //
-    Cube::from_raw(0x0B11120817AD0E54, 0x0DEB1908043214E6), //
-    Cube::from_raw(0x0812110B14AE2D77, 0x0D6F3800462290C7),
+    Cube::from_raw_unchecked(0x12080E140B31B74D, 0x0394869C612DE71A), //
+    Cube::from_raw_unchecked(0x140E08120D37916B, 0x029CC48CE50CEF58), //
+    Cube::from_raw_unchecked(0x15090F130C10768A, 0x0ADE96D637984A33), //
+    Cube::from_raw_unchecked(0x130F09150A1650AC, 0x0BD6D4C6B3B94271), //
+    Cube::from_raw_unchecked(0x0607020304458021, 0x000C41ADAF45250B), //
+    Cube::from_raw_unchecked(0x030207060140A504, 0x018022B56974A968), //
+    Cube::from_raw_unchecked(0x0915100C136F0AB6, 0x09C2515A149BD2D5), //
+    Cube::from_raw_unchecked(0x0C101509166A2F93, 0x084E3242D2AA5EB6), //
+    Cube::from_raw_unchecked(0x170D0B110E149248, 0x0218E584A71C6B79), //
+    Cube::from_raw_unchecked(0x110B0D170812B46E, 0x0310A794233D633B), //
+    Cube::from_raw_unchecked(0x0F13160A15490C90, 0x08CA134A90BADA97), //
+    Cube::from_raw_unchecked(0x0A16130F104C29B5, 0x09467052568B56F4), //
+    Cube::from_raw_unchecked(0x0E14170D12882B51, 0x0C677A10C2039885), //
+    Cube::from_raw_unchecked(0x0D17140E118B0872, 0x0CE35B1880131CA4), //
+    Cube::from_raw_unchecked(0x0100030205A46706, 0x04A16A290E608062), //
+    Cube::from_raw_unchecked(0x0203000106A74425, 0x04254B214C700443), //
+    Cube::from_raw_unchecked(0x160A0C100F335589, 0x0A5AB7DE7588CE12), //
+    Cube::from_raw_unchecked(0x100C0A16093573AF, 0x0B52F5CEF1A9C650), //
+    Cube::from_raw_unchecked(0x0706050403824100, 0x05A928398A418820), //
+    Cube::from_raw_unchecked(0x0405060700816223, 0x052D0931C8510C01), //
+    Cube::from_raw_unchecked(0x0504010007668302, 0x008860A5ED55A12A), //
+    Cube::from_raw_unchecked(0x000104050263A627, 0x010403BD2B642D49), //
+    Cube::from_raw_unchecked(0x0B11120817AD0E54, 0x0DEB1908043214E6), //
+    Cube::from_raw_unchecked(0x0812110B14AE2D77, 0x0D6F3800462290C7),
 ];
 
 pub static MOVE_TABLE: &[Cube; 36] = &[
-    Cube::from_raw(0x0702050603804104, 0x058122398A41A828), // Ucw
-    Cube::from_raw(0x0700050203844106, 0x05A12A398A418022), // U2
-    Cube::from_raw(0x0704050003864102, 0x058920398A41A02A), // Uccw
-    Cube::from_raw(0x0506010407824300, 0x00A868398A458920), // Dcw
-    Cube::from_raw(0x0106030405824700, 0x04A968398A408860), // D2
-    Cube::from_raw(0x0306070401824500, 0x01A828398A448960), // Dccw
-    Cube::from_raw(0x07060C1003825509, 0x05DAA83E74418820), // Fcw
-    Cube::from_raw(0x0706000103824405, 0x05A548394C418820), // F2
-    Cube::from_raw(0x070609150382500C, 0x05D6C83EB2418820), // Fccw
-    Cube::from_raw(0x130F05040A964100, 0x0BA934C18BB18820), // Bcw
-    Cube::from_raw(0x0203050406874100, 0x04292B218A718820), // B2
-    Cube::from_raw(0x160A05040F934100, 0x0A2937D98B818820), // Bccw
-    Cube::from_raw(0x07060504118B4812, 0x05A928188A431C20), // Rcw
-    Cube::from_raw(0x0706050400814203, 0x05A92831CA410C20), // R2
-    Cube::from_raw(0x0706050412884B11, 0x05A92810CA439820), // Rccw
-    Cube::from_raw(0x0E14170D03824100, 0x05A9283982018885), // Lcw
-    Cube::from_raw(0x0405060703824100, 0x05A9283988518801), // L2
-    Cube::from_raw(0x0D17140E03824100, 0x05A92839801188A4), // Lccw
-    Cube::from_raw(0x0706050403628100, 0x05A928A5ED518820), // Ecw
-    Cube::from_raw(0x0706050403A26100, 0x05A928290E618820), // E2
-    Cube::from_raw(0x070605040342A100, 0x05A928B569718820), // Eccw
-    Cube::from_raw(0x0706050403224180, 0x05A928398A48CE12), // Scw
-    Cube::from_raw(0x0706050403A24120, 0x05A928398A400443), // S2
-    Cube::from_raw(0x07060504030241A0, 0x05A928398A494271), // Sccw
-    Cube::from_raw(0x0706050403822140, 0x0C677A398A418820), // Mcw
-    Cube::from_raw(0x0706050403826120, 0x052D09398A418820), // M2
-    Cube::from_raw(0x0706050403820160, 0x0CE35B398A418820), // Mccw
-    Cube::from_raw(0x030207060140A504, 0x018022B56974A968), // Ycw
-    Cube::from_raw(0x0100030205A46706, 0x04A16A290E608062), // Y2
-    Cube::from_raw(0x0504010007668302, 0x008860A5ED55A12A), // Yccw
-    Cube::from_raw(0x160A0C100F335589, 0x0A5AB7DE7588CE12), // Zcw
-    Cube::from_raw(0x0203000106A74425, 0x04254B214C700443), // Z2
-    Cube::from_raw(0x130F09150A1650AC, 0x0BD6D4C6B3B94271), // Zccw
-    Cube::from_raw(0x0D17140E118B0872, 0x0CE35B1880131CA4), // Xcw
-    Cube::from_raw(0x0405060700816223, 0x052D0931C8510C01), // X2
-    Cube::from_raw(0x0E14170D12882B51, 0x0C677A10C2039885), // Xccw
+    Cube::from_raw_unchecked(0x0702050603804104, 0x058122398A41A828), // Ucw
+    Cube::from_raw_unchecked(0x0700050203844106, 0x05A12A398A418022), // U2
+    Cube::from_raw_unchecked(0x0704050003864102, 0x058920398A41A02A), // Uccw
+    Cube::from_raw_unchecked(0x0506010407824300, 0x00A868398A458920), // Dcw
+    Cube::from_raw_unchecked(0x0106030405824700, 0x04A968398A408860), // D2
+    Cube::from_raw_unchecked(0x0306070401824500, 0x01A828398A448960), // Dccw
+    Cube::from_raw_unchecked(0x07060C1003825509, 0x05DAA83E74418820), // Fcw
+    Cube::from_raw_unchecked(0x0706000103824405, 0x05A548394C418820), // F2
+    Cube::from_raw_unchecked(0x070609150382500C, 0x05D6C83EB2418820), // Fccw
+    Cube::from_raw_unchecked(0x130F05040A964100, 0x0BA934C18BB18820), // Bcw
+    Cube::from_raw_unchecked(0x0203050406874100, 0x04292B218A718820), // B2
+    Cube::from_raw_unchecked(0x160A05040F934100, 0x0A2937D98B818820), // Bccw
+    Cube::from_raw_unchecked(0x07060504118B4812, 0x05A928188A431C20), // Rcw
+    Cube::from_raw_unchecked(0x0706050400814203, 0x05A92831CA410C20), // R2
+    Cube::from_raw_unchecked(0x0706050412884B11, 0x05A92810CA439820), // Rccw
+    Cube::from_raw_unchecked(0x0E14170D03824100, 0x05A9283982018885), // Lcw
+    Cube::from_raw_unchecked(0x0405060703824100, 0x05A9283988518801), // L2
+    Cube::from_raw_unchecked(0x0D17140E03824100, 0x05A92839801188A4), // Lccw
+    Cube::from_raw_unchecked(0x0706050403628100, 0x05A928A5ED518820), // Ecw
+    Cube::from_raw_unchecked(0x0706050403A26100, 0x05A928290E618820), // E2
+    Cube::from_raw_unchecked(0x070605040342A100, 0x05A928B569718820), // Eccw
+    Cube::from_raw_unchecked(0x0706050403224180, 0x05A928398A48CE12), // Scw
+    Cube::from_raw_unchecked(0x0706050403A24120, 0x05A928398A400443), // S2
+    Cube::from_raw_unchecked(0x07060504030241A0, 0x05A928398A494271), // Sccw
+    Cube::from_raw_unchecked(0x0706050403822140, 0x0C677A398A418820), // Mcw
+    Cube::from_raw_unchecked(0x0706050403826120, 0x052D09398A418820), // M2
+    Cube::from_raw_unchecked(0x0706050403820160, 0x0CE35B398A418820), // Mccw
+    Cube::from_raw_unchecked(0x030207060140A504, 0x018022B56974A968), // Ycw
+    Cube::from_raw_unchecked(0x0100030205A46706, 0x04A16A290E608062), // Y2
+    Cube::from_raw_unchecked(0x0504010007668302, 0x008860A5ED55A12A), // Yccw
+    Cube::from_raw_unchecked(0x160A0C100F335589, 0x0A5AB7DE7588CE12), // Zcw
+    Cube::from_raw_unchecked(0x0203000106A74425, 0x04254B214C700443), // Z2
+    Cube::from_raw_unchecked(0x130F09150A1650AC, 0x0BD6D4C6B3B94271), // Zccw
+    Cube::from_raw_unchecked(0x0D17140E118B0872, 0x0CE35B1880131CA4), // Xcw
+    Cube::from_raw_unchecked(0x0405060700816223, 0x052D0931C8510C01), // X2
+    Cube::from_raw_unchecked(0x0E14170D12882B51, 0x0C677A10C2039885), // Xccw
 ];
 
 impl From<Move> for Cube {

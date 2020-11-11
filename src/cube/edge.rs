@@ -1,5 +1,6 @@
 use crate::Face;
 use crate::FaceMove;
+use crate::MapError;
 
 const E0: u64 = 0b00001_00001_00001_00001_00001_00001_00001_00001_00001_00001_00001_00001;
 const E4: u64 = E0 << 4;
@@ -50,6 +51,9 @@ pub enum Edge {
     BD,
 }
 impl Edge {
+    pub fn edges() -> impl Iterator<Item=Edge> {
+        unsafe{(0u8..12).map(|e| std::mem::transmute(e))}
+    }
     pub fn faces(self) -> (Face, Face) {
         use Edge::*;
         use Face::*;
@@ -73,7 +77,7 @@ impl From<FaceMove> for EdgeMap {
     fn from(turn: FaceMove) -> EdgeMap {
         use FaceMove::*;
         EdgeMap {
-            set: match turn {
+            raw: match turn {
                 Ucw => 0x058122398A41A828,
                 U2 => 0x05A12A398A418022,
                 Uccw => 0x058920398A41A02A,
@@ -132,13 +136,13 @@ impl std::ops::Mul for EdgeMap {
     type Output = Self;
     fn mul(self, rhs: Self) -> Self {
         EdgeMap {
-            set: map_mul(self.set, rhs.set),
+            raw: map_mul(self.raw, rhs.raw),
         }
     }
 }
 impl std::ops::MulAssign for EdgeMap {
     fn mul_assign(&mut self, rhs: Self) {
-        self.set = map_mul(self.set, rhs.set);
+        self.raw = map_mul(self.raw, rhs.raw);
     }
 }
 
@@ -180,7 +184,7 @@ impl std::ops::MulAssign for EdgeMap {
 /// ```
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct EdgeMap {
-    pub set: u64,
+    pub raw: u64,
 }
 
 impl std::fmt::Debug for EdgeMap {
@@ -193,15 +197,40 @@ impl std::fmt::Debug for EdgeMap {
 impl Default for EdgeMap {
     fn default() -> EdgeMap {
         EdgeMap {
-            set: 0b01011_01010_01001_01000_00111_00110_00101_00100_00011_00010_00001_00000,
+            raw: 0b01011_01010_01001_01000_00111_00110_00101_00100_00011_00010_00001_00000,
         }
     }
 }
 use std::mem::transmute;
 
+#[derive(Copy,Clone,PartialEq,Eq,Debug)]
+#[repr(transparent)]
+pub struct EOIndex(pub u32);
+
+impl EOIndex {
+    pub const SIZE: u32 = 2048; // 2^11 
+}
+
+#[derive(Copy,Clone,PartialEq,Eq,Debug)]
+#[repr(transparent)]
+pub struct EPIndex(pub u32);
+
+impl EPIndex {
+    pub const SIZE: u32 = 479001600; // 12 factorial
+}
+
 impl EdgeMap {
+    pub fn get(self, edge: Edge) -> (Edge, Flip) {
+        let s = self.raw >> (5 * (edge as u32));
+        unsafe {
+            (
+                transmute((s & 0b1111) as u8),
+                transmute(((s >> 4) & 0b1) as u8),
+            )
+        }
+    }
     pub fn iter(self) -> impl Iterator<Item = (Edge, (Edge, Flip))> + ExactSizeIterator {
-        let mut set = self.set;
+        let mut set = self.raw;
         (0..12).map(move |i| unsafe {
             let edge: Edge = transmute(i as u8);
             let position: Edge = transmute((set & 0b1111) as u8);
@@ -210,21 +239,140 @@ impl EdgeMap {
             (edge, (position, ori))
         })
     }
-
-    pub fn get(self, edge: Edge) -> (Edge, Flip) {
-        let s = self.set >> (5 * (edge as u32));
-        unsafe {
-            (
-                transmute((s & 0b1111) as u8),
-                transmute(((s >> 4) & 0b1) as u8),
-            )
+    pub fn from_iter(iter: impl Iterator<Item = (Edge, (Edge, Flip))>) -> Option<EdgeMap> {
+        let mut res = EdgeMap::default().raw;
+        for (edge, (pos, ori)) in iter {
+            res &= !(0b11111u64 << ((edge as u64) * 5));
+            res |= ((pos as u64) | ((ori as u64) << 4)) << ((edge as u64) * 5);
         }
+        let mapping = EdgeMap { raw: res };
+        if mapping.validate().is_ok() {
+            Some(mapping)
+        } else {
+            None
+        }
+        
+    }
+
+
+    pub(crate) fn validate(self) -> Result<(),MapError> {
+        let get = |edge| {
+            let s = self.raw >> (5 * (edge as u32));
+            ((s & 0b1111), ((s >> 4) & 0b1))
+        };
+        let mut edge_mask = 0u32;
+        let mut flip_sum = 0;
+        for edge in Edge::edges() {
+            let (pos, flip) = get(edge);
+            if pos > 11 {
+                return Err(MapError::OutOfBounds)
+            }
+            edge_mask |= 1 << (edge as u32);
+            flip_sum ^= flip as u32;
+        }
+        if edge_mask != 0b1111_1111_1111 {
+           Err(MapError::Duplicate) 
+        } else if flip_sum != 0 {
+           Err(MapError::Orientation) 
+        } else {
+            Ok(())
+        }
+            
+    }
+
+    pub fn inverse(self) -> EdgeMap {
+        // const E0:u64 = 0b00001_00001_00001_00001_00001_00001_00001_00001_00001_00001_00001_00001;
+        // const E4:u64 = E0 << 4;
+        let set = self.raw;
+        let mut res = 0;
+        for i in 0..12 {
+            let offset = i * 5;
+            let input = set >> offset;
+            let dest = i | (input & 0b10000);
+            //TODO this should be or not xro
+            res ^= dest << ((input & 0b1111) * 5);
+        }
+        EdgeMap { raw: res }
+    }
+
+    /// Apply inverse then multiply. Provided as an optimization, twice as fast as the equivalent in example.
+    ///
+    /// # Example
+    /// ```
+    /// use speedcube::Move::*;
+    /// let (a, b) = (Rcw.edges(), Fcw.edges());
+    /// assert_eq!(a.inverse()*b, a.inverse_multiply(b));
+    /// ```
+    pub fn inverse_multiply(self, other: EdgeMap) -> EdgeMap {
+        EdgeMap {
+            raw: map_inverse_mul(self.raw, other.raw),
+        }
+    }
+
+    pub fn is_solved(self) -> bool {
+        self == EdgeMap::default()
+    }
+
+}
+
+/// # Indices
+impl EdgeMap {
+    pub fn orientation_index(self) -> EOIndex {
+        let mut b = 0;
+        for i in 0..11 {
+            b|=((self.raw >> ((i*5 + 4))) &0b1)<<i;
+        }
+        EOIndex(b as u32)
+    }
+
+    pub fn permutation_index(self) -> EPIndex {
+        let mut idx = 0;
+        let mut val = 0xFEDCBA9876543210u64;
+        for (edge,(pos,_)) in self.iter().take(11) {
+            let v = (pos as u8) << 2;
+            idx = (12 - edge as u32)*idx + ((val >> v) & 0xf) as u32;
+            val -= 0x1111111111111110 << v;
+        }
+        EPIndex(idx as u32)
+    }
+    pub fn set_orientation_index(&mut self, index: EOIndex) {
+        // if BMI2 is avaibled should use pdep TODO
+        let mut b = 0;
+        let e = index.0 as u64;
+        for i in 0..11 {
+            b|=(e&(0b1<<i))<<((i*5+4)-i);
+        }
+        b|= ((index.0.count_ones() as u64)&1) << (5*11+4);
+        self.raw &= !E4;
+        self.raw |= b;
+    }
+
+    pub fn set_permutation_index(&mut self, index: EPIndex) {
+        let mut idx = index.0 as u32;
+        let mut val = 0xFEDCBA9876543210u64;
+        let mut extract = 0u64;
+        for p in 2..12 as u64 + 1 {
+            extract = extract << 4 | (idx as u64) % p;
+            idx /= p as u32;
+        }
+        let mut res = 0;
+        for e in 0..11 {
+            let v = ((extract & 0xf) << 2) as u32;
+            extract >>= 4;
+            res |= (((val >> v) & 0xf) as u64) << (e * 5);
+            let m = (1u64 << v) - 1;
+            val = val & m | (val >> 4) & !m; // TODO verfiy
+        }
+        res |= ((val & 0xf) as u64) << (5 * 11);
+        self.raw &= E4;
+        self.raw |= res;
+
     }
 
     pub fn orientation_residue(self) -> Flip {
         //TODO optimized
         let mut flip_parity = 0;  
-        for (_, (edge, flip)) in self.iter() {
+        for (_, (_, flip)) in self.iter() {
             flip_parity ^= flip as u32;
         }
         if flip_parity == 0 {
@@ -233,16 +381,7 @@ impl EdgeMap {
             Flip::Flipped
         }
     }
-    pub fn is_valid(self) -> bool {
-        let mut edge_mask = 0;
-        let mut flip_sum = 0;
-        for (_, (edge, flip)) in self.iter() {
-            edge_mask |= 1 << (edge as u32);
-            flip_sum ^= flip as u32;
-        }
-        edge_mask == 0b1111_1111_1111 && //All corners appear exactly once
-            flip_sum == 0
-    }
+
     pub fn permutation_parity(self) -> bool {
         let mut transc = false;
         { // WALK edge permutation in discrete cycle form
@@ -266,46 +405,59 @@ impl EdgeMap {
         }
         transc
     }
-    pub fn permutation_index(self) -> usize {
-        let mut idx = 0;
-        let mut val = 0xFEDCBA9876543210u64;
-        for (edge,(pos,_)) in self.iter().take(11) {
-            let v = (pos as u8) << 2;
-            idx = (12 - edge as u32)*idx + ((val >> v) & 0xf) as u32;
-            val -= 0x1111111111111110 << v;
-        }
-        return idx as usize;
+}
+
+/// #Raw Interface
+/// todo document
+impl EdgeMap {
+    pub fn from_raw(raw: u64) -> Result<EdgeMap, MapError> {
+        let cm = EdgeMap{raw};
+        cm.validate().map(|_| cm)
     }
-    pub fn is_solved(self) -> bool {
-        self == EdgeMap::default()
+    
+    pub unsafe fn from_raw_unchecked(raw: u64) -> EdgeMap {
+        EdgeMap{raw}
     }
 
-    pub fn inverse(self) -> EdgeMap {
-        // const E0:u64 = 0b00001_00001_00001_00001_00001_00001_00001_00001_00001_00001_00001_00001;
-        // const E4:u64 = E0 << 4;
-        let set = self.set;
-        let mut res = 0;
-        for i in 0..12 {
-            let offset = i * 5;
-            let input = set >> offset;
-            let dest = i | (input & 0b10000);
-            //TODO this should be or not xro
-            res ^= dest << ((input & 0b1111) * 5);
-        }
-        EdgeMap { set: res }
+    pub fn raw(self) -> u64 {
+        self.raw
     }
+}
 
-    /// Apply inverse then multiply. Provided as an optimization, twice as fast as the equivalent in example.
-    ///
-    /// # Example
-    /// ```
-    /// use speedcube::Move::*;
-    /// let (a, b) = (Rcw.edges(), Fcw.edges());
-    /// assert_eq!(a.inverse()*b, a.inverse_multiply(b));
-    /// ```
-    pub fn inverse_multiply(self, other: EdgeMap) -> EdgeMap {
-        EdgeMap {
-            set: map_inverse_mul(self.set, other.set),
+#[cfg(test)]
+mod tests {
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+    use crate::Move;
+    use std::convert::TryFrom;
+    #[test]
+    fn edge_orientation_index_mapping() {
+        let mut rng1 = oorandom::Rand32::new(0xdeadbeef);
+        let mut random_move = || -> Move { Move::try_from((rng1.rand_u32() % 18) as u8).unwrap() };
+        let mut rng = oorandom::Rand32::new(0xdeadbeef);
+        let mut mcube = EdgeMap::default();
+        for _ in 0..3000 {
+            let mut cube = mcube;
+            mcube *= random_move();
+            let index = EOIndex(rng.rand_u32() % EOIndex::SIZE);
+            cube.set_orientation_index(index);
+            assert_eq!(index, cube.orientation_index());
+            assert_eq!(cube.validate(),Ok(()));
+        }
+    }
+    #[test]
+    fn edge_premutation_index_mapping() {
+        let mut rng1 = oorandom::Rand32::new(0xdeadbeef);
+        let mut random_move = || -> Move { Move::try_from((rng1.rand_u32() % 18) as u8).unwrap() };
+        let mut rng = oorandom::Rand32::new(0xdeadbeef);
+        let mut mcube = EdgeMap::default();
+        for _ in 0..3000 {
+            let mut cube = mcube;
+            mcube *= random_move();
+            let index = EPIndex(rng.rand_u32() % EPIndex::SIZE);
+            cube.set_permutation_index(index);
+            assert_eq!(index, cube.permutation_index());
+            assert_eq!(cube.validate(),Ok(()));
         }
     }
 }

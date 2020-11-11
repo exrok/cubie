@@ -1,6 +1,6 @@
 use crate::cube::center::CenterMap;
 use crate::Move;
-use crate::{CornerMap, EdgeMap, FaceMove, TileMap};
+use crate::{CornerMap, EdgeMap, FaceMove, MapError};
 use std::ops::{Mul, MulAssign};
 
 pub mod center;
@@ -8,6 +8,7 @@ pub mod corner;
 pub mod edge;
 mod fixed_centers_cube;
 pub use self::fixed_centers_cube::FixedCentersCube;
+pub use self::edge::Edge;
 
 /// Stores both the centers and corners in a single u64. Used in
 /// cube to optimize for size.
@@ -19,12 +20,12 @@ struct CenteredCornerMap {
 impl CenteredCornerMap {
     fn new(centers: CenterMap, corners: CornerMap) -> CenteredCornerMap {
         CenteredCornerMap {
-            raw: centers.raw | corners.set,
+            raw: centers.raw | corners.raw,
         }
     }
     fn corners(self) -> CornerMap {
         CornerMap {
-            set: self.raw & 0x1f1f1f1f_1f1f1f1f,
+            raw: self.raw & 0x1f1f1f1f_1f1f1f1f,
         }
     }
     fn centers(self) -> CenterMap {
@@ -50,13 +51,56 @@ impl Default for Cube {
     }
 }
 
+/// # Components
 impl Cube {
-    pub(crate) const fn from_raw(centered_corners: u64, edges: u64) -> Cube {
+    pub fn new(centers: CenterMap, corners: CornerMap, edges:EdgeMap) -> Cube {
+        Cube {
+            centered_corners: CenteredCornerMap::new(centers, corners),
+            edges
+        }
+    }
+    pub fn corners(&self) -> CornerMap {
+        self.centered_corners.corners()
+    }
+    pub fn edges(&self) -> EdgeMap {
+        self.edges
+    }
+    pub fn centers(&self) -> CenterMap {
+        self.centered_corners.centers()
+    }
+
+    pub fn set_corners(&mut self, corners: CornerMap) {
+        self.centered_corners= CenteredCornerMap::new(self.centers(), corners);
+    }
+    pub fn set_edges(&mut self, edges: EdgeMap)  {
+        self.edges = edges;
+    }
+    pub fn set_centers(&mut self, centers: CenterMap) {
+        self.centered_corners= CenteredCornerMap::new(centers, self.corners());
+    }
+
+}
+impl Cube {
+
+    pub const fn raw(self) -> (u64,u64) {
+        (self.centered_corners.raw, self.edges.raw)
+    }
+
+    pub fn from_raw(centered_corners: u64, edges: u64) -> Result<Cube, MapError> {
+        let cube = Cube {
+            centered_corners: CenteredCornerMap {
+                raw: centered_corners &0x1f_1f1f1f1fffffff,
+            },
+            edges: EdgeMap { raw: edges },
+        };
+        cube.validate().map(|_| cube)
+    }
+    pub(crate) const fn from_raw_unchecked(centered_corners: u64, edges: u64) -> Cube {
         Cube {
             centered_corners: CenteredCornerMap {
                 raw: centered_corners,
             },
-            edges: EdgeMap { set: edges },
+            edges: EdgeMap { raw: edges },
         }
     }
     pub fn inverse_multiply(self, rhs: Cube) -> Cube {
@@ -77,18 +121,6 @@ impl Cube {
             edges: self.edges.inverse(),
         }
     }
-    pub fn tilemap(self) -> TileMap {
-        self.into()
-    }
-    pub fn corners(&self) -> CornerMap {
-        self.centered_corners.corners()
-    }
-    pub fn edges(&self) -> EdgeMap {
-        self.edges
-    }
-    pub fn centers(&self) -> CenterMap {
-        self.centered_corners.centers()
-    }
 
     pub fn has_solution(self) -> bool  {
         self.corners().orientation_residue().is_identity()
@@ -97,8 +129,11 @@ impl Cube {
                 self.corners().permutation_parity() ^
                 self.centers().permutation_parity()) == false
     }
-    pub fn is_valid(self) -> bool  {
-        self.corners().is_valid() && self.edges.is_valid() && self.centers().is_valid()
+
+    pub fn validate(self) -> Result<(),MapError>  {
+        self.edges.validate()
+            .and_then(|_| self.corners().validate())
+            .and_then(|_| self.centers().validate())
     }
     pub fn is_solved(self) -> bool {
         self == crate::moves::ROTATION_TABLE[self.centers().index() as usize]

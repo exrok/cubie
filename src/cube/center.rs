@@ -1,4 +1,4 @@
-use crate::{Cube, Face};
+use crate::{Cube, Face, MapError};
 use std::convert::TryInto;
 
 /// Center piece mapping for 3x3 cube: Center -> CenterPosition
@@ -48,11 +48,15 @@ impl CenterMap {
         crate::moves::ROTATION_TABLE[self.index() as usize]
     }
     #[inline]
-    pub fn is_valid(self) -> bool {
+    pub fn validate(self) -> Result<(), MapError> {
         if let Some(cube) = crate::moves::ROTATION_TABLE.get(self.index() as usize) {
-            cube.centers() == self
+            if cube.centers() == self {
+                Ok(())
+            } else {
+                Err(MapError::OutOfBounds)
+            }
         } else {
-            false
+            Err(MapError::OutOfBounds)
         }
     }
 
@@ -109,14 +113,11 @@ impl CenterMap {
 }
 
 /// #Raw Interface
+/// todo document
 impl CenterMap {
-    pub fn from_raw(raw: u64) -> Option<CenterMap> {
+    pub fn from_raw(raw: u64) -> Result<CenterMap, MapError> {
         let cm = CenterMap{raw};
-        if cm.is_valid() {
-            Some(cm)
-        } else {
-            None
-        }
+        cm.validate().map(|_|cm) 
     }
     
     pub unsafe fn from_raw_unchecked(raw: u64) -> CenterMap {
