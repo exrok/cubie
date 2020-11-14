@@ -1,11 +1,11 @@
 use crate::cube::center::CenterMap;
 use crate::cube::corner::Corner;
 use crate::cube::edge::Edge;
-use crate::{ CornerMap, MapError };
 use crate::Cube;
 use crate::EdgeMap;
 use crate::Face;
 use crate::FixedCentersCube;
+use crate::{CornerMap, MapError};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum TileMapConversionError {
@@ -68,7 +68,7 @@ impl From<EdgeMap> for TileMap {
 }
 
 use crate::cube::edge::Flip;
-fn edge_from_faces(a :Face, b:Face ) -> Option<(Edge, Flip)>{
+fn edge_from_faces(a: Face, b: Face) -> Option<(Edge, Flip)> {
     use Edge::*;
     use Flip::*;
 
@@ -80,17 +80,47 @@ fn edge_from_faces(a :Face, b:Face ) -> Option<(Edge, Flip)>{
     //     bff[bi*6+ai] = Some((edge, Flip::Flipped));
     //     // eprintln!("{:?} edge", edge.faces())
     // }
-    let map = [None, None, Some((FU, Flipped)), Some((BU, Flipped)), Some((RU, Flipped)),
-     Some((LU, Flipped)), None, None, Some((FD, Flipped)), Some((BD, Flipped)),
-     Some((RD, Flipped)), Some((LD, Flipped)), Some((FU, Identity)), Some((FD, Identity)),
-     None, None, Some((FR, Identity)), Some((FL, Identity)), Some((BU, Identity)),
-     Some((BD, Identity)), None, None, Some((BR, Identity)), Some((BL, Identity)),
-     Some((RU, Identity)), Some((RD, Identity)), Some((FR, Flipped)), Some((BR, Flipped)),
-     None, None, Some((LU, Identity)), Some((LD, Identity)), Some((FL, Flipped)),
-     Some((BL, Flipped)), None, None];
-    map[a as usize *6 + b as usize]
+    let map = [
+        None,
+        None,
+        Some((FU, Flipped)),
+        Some((BU, Flipped)),
+        Some((RU, Flipped)),
+        Some((LU, Flipped)),
+        None,
+        None,
+        Some((FD, Flipped)),
+        Some((BD, Flipped)),
+        Some((RD, Flipped)),
+        Some((LD, Flipped)),
+        Some((FU, Identity)),
+        Some((FD, Identity)),
+        None,
+        None,
+        Some((FR, Identity)),
+        Some((FL, Identity)),
+        Some((BU, Identity)),
+        Some((BD, Identity)),
+        None,
+        None,
+        Some((BR, Identity)),
+        Some((BL, Identity)),
+        Some((RU, Identity)),
+        Some((RD, Identity)),
+        Some((FR, Flipped)),
+        Some((BR, Flipped)),
+        None,
+        None,
+        Some((LU, Identity)),
+        Some((LD, Identity)),
+        Some((FL, Flipped)),
+        Some((BL, Flipped)),
+        None,
+        None,
+    ];
+    map[a as usize * 6 + b as usize]
 }
-pub fn tiles_from_edge(edge :Edge) -> (usize,usize) {
+pub fn tiles_from_edge(edge: Edge) -> (usize, usize) {
     match edge {
         Edge::LU => (46, 3),
         Edge::LD => (52, 12),
@@ -106,7 +136,7 @@ pub fn tiles_from_edge(edge :Edge) -> (usize,usize) {
         Edge::BD => (34, 16),
     }
 }
-pub fn tiles_from_corner(corner: Corner) -> [usize;3] {
+pub fn tiles_from_corner(corner: Corner) -> [usize; 3] {
     match corner {
         Corner::ULF => [47, 6, 18],
         Corner::DLF => [53, 9, 24],
@@ -119,7 +149,7 @@ pub fn tiles_from_corner(corner: Corner) -> [usize;3] {
     }
 }
 
-    use crate::cube::corner::Twist;
+use crate::cube::corner::Twist;
 impl TileMap {
     pub fn as_array(&self) -> &[Option<Face>; 54] {
         unsafe { std::mem::transmute(&self.map) }
@@ -127,10 +157,10 @@ impl TileMap {
     pub fn as_array_mut(&mut self) -> &mut [Option<Face>; 54] {
         unsafe { std::mem::transmute(&mut self.map) }
     }
-    pub fn cube(&self) -> Result<Cube,TMErr> {
+    pub fn cube(&self) -> Result<Cube, TMErr> {
         Ok(Cube::new(self.centers()?, self.corners()?, self.edges()?))
     }
-    pub fn fc_cube(&self) -> Result<FixedCentersCube,TMErr> {
+    pub fn fc_cube(&self) -> Result<FixedCentersCube, TMErr> {
         Ok(self.cube()?.into())
     }
     pub fn autofill(&mut self) {
@@ -139,107 +169,113 @@ impl TileMap {
         let mut corner_acc = 0;
         let mut twist_acc = Twist::Identity;
         let mut unset_acc = None;
-        let mut set_cnt =0; 
+        let mut set_cnt = 0;
         for pos in Corner::corners() {
             let map = tiles_from_corner(pos);
             let mut unset = 0;
             let mut cnt = 0;
-            let mut f = [0,0,0];
+            let mut f = [0, 0, 0];
             for i in 0..3 {
                 if let Some(face) = tiles[map[i]] {
                     f[i] = face as u64;
-                    cnt+=1;
+                    cnt += 1;
                 } else {
                     unset = i;
                 }
             }
             if cnt == 2 {
-                f[unset] = (f[0]^f[1]^f[2]^0b110)&0b110;
-                if f[unset]&0b110 == 0b110 {//two same faces
+                f[unset] = (f[0] ^ f[1] ^ f[2] ^ 0b110) & 0b110;
+                if f[unset] & 0b110 == 0b110 {
+                    //two same faces
                     continue;
                 }
-                let corner = ((f[ 0 ]&1) << (f[ 0 ] >> 1)) | ((f[ 1 ]&1) << (f[ 1 ] >> 1)) | ((f[ 2 ]&1) << (f[ 2 ] >> 1));
-                let y_axis = if (f[ 0 ] & 0b110) == 0 {
+                let corner = ((f[0] & 1) << (f[0] >> 1))
+                    | ((f[1] & 1) << (f[1] >> 1))
+                    | ((f[2] & 1) << (f[2] >> 1));
+                let y_axis = if (f[0] & 0b110) == 0 {
                     f[2]
-                } else if (f[ 1 ] & 0b110) == 0 {
+                } else if (f[1] & 0b110) == 0 {
                     f[0]
-                } else  {
+                } else {
                     f[1]
                 };
 
-                if (((0b01101001_00) >> ((pos as u64) ^ (corner as u64))) ^ y_axis)&0b100 != 0 {
+                if (((0b01101001_00) >> ((pos as u64) ^ (corner as u64))) ^ y_axis) & 0b100 != 0 {
                     f[unset] ^= 1;
                 }
-                tiles[map[unset]] = Some(unsafe{std::mem::transmute(f[unset] as u8)});
+                tiles[map[unset]] = Some(unsafe { std::mem::transmute(f[unset] as u8) });
             }
             if cnt < 2 {
-                unset_acc = Some(pos); 
+                unset_acc = Some(pos);
                 continue;
             }
-            let [f1,f2,f3] = f;
+            let [f1, f2, f3] = f;
 
             if (f1 ^ f2 ^ f3) & 0b110 != 0b110 {
                 continue;
             }
             // corner may still be wrong if 2-cycle in above faces thus test y_axis consistancty
-            let corner = ((f1&1) << (f1 >> 1)) | ((f2&1) << (f2 >> 1)) | ((f3&1) << (f3 >> 1));
+            let corner =
+                ((f1 & 1) << (f1 >> 1)) | ((f2 & 1) << (f2 >> 1)) | ((f3 & 1) << (f3 >> 1));
             let (mut twist, y_axis) = if (f1 & 0b110) == 0 {
-                (Twist::Ccw,f3)
+                (Twist::Ccw, f3)
             } else if (f2 & 0b110) == 0 {
-                (Twist::Identity,f1)
+                (Twist::Identity, f1)
             } else if (f3 & 0b110) == 0 {
-                (Twist::Cw,f2)
+                (Twist::Cw, f2)
             } else {
                 continue;
             };
 
-            if (((0b01101001_00) >> ((pos as u64) ^ (corner as u64))) ^ y_axis)&0b100 != 0 {
+            if (((0b01101001_00) >> ((pos as u64) ^ (corner as u64))) ^ y_axis) & 0b100 != 0 {
                 continue;
             }
 
-            let a =  pos as u64;
+            let a = pos as u64;
             if (a ^ (a >> 1) ^ (a >> 2)) & 0b1 == 1 {
                 twist = twist.inverse();
             }
 
             corner_acc ^= corner as u64;
-            twist_acc = twist_acc*twist;
-            set_cnt+=1;
+            twist_acc = twist_acc * twist;
+            set_cnt += 1;
         }
         if set_cnt == 7 {
             if let Some(unset_acc) = unset_acc {
-                let c:Corner = unsafe{std::mem::transmute(corner_acc as u8)};
+                let c: Corner = unsafe { std::mem::transmute(corner_acc as u8) };
                 let map = tiles_from_corner(unset_acc);
                 let a = (unset_acc as u32);
                 if (a ^ (a >> 1) ^ (a >> 2)) & 0b1 == 1 {
                     eprintln!("inversed");
                     twist_acc = twist_acc.inverse();
                 }
-                eprintln!("AUTOFILE: {:?}",twist_acc);
+                eprintln!("AUTOFILE: {:?}", twist_acc);
                 let new = match twist_acc.inverse() {
-                    Twist::Identity => [c.x(),c.y(),c.z()],
-                    Twist::Cw => [c.z(),c.x(),c.y()],
-                    Twist::Ccw => [c.y(),c.z(),c.x()],
-                }; 
-                if map.iter().map(|m|tiles[*m]).zip(new.iter()).all(|(o,n)| {
-                    o.map_or(true, |a| a == *n)
-                }) {
+                    Twist::Identity => [c.x(), c.y(), c.z()],
+                    Twist::Cw => [c.z(), c.x(), c.y()],
+                    Twist::Ccw => [c.y(), c.z(), c.x()],
+                };
+                if map
+                    .iter()
+                    .map(|m| tiles[*m])
+                    .zip(new.iter())
+                    .all(|(o, n)| o.map_or(true, |a| a == *n))
+                {
                     for i in 0..3 {
                         tiles[map[i]] = Some(new[i]);
                     }
                 }
-
             }
         }
         let mut edge_masks = [
-            0b111111 ^ (1<<Face::Up as u8) ^(1<<Face::Down as u8),
-            0b111111 ^ (1<<Face::Up as u8) ^(1<<Face::Down as u8),
-            0b111111 ^ (1<<Face::Front as u8) ^(1<<Face::Back as u8),
-            0b111111 ^ (1<<Face::Front as u8) ^(1<<Face::Back as u8),
-            0b111111 ^ (1<<Face::Right as u8) ^(1<<Face::Left as u8),
-            0b111111 ^ (1<<Face::Right as u8) ^(1<<Face::Left as u8),
+            0b111111 ^ (1 << Face::Up as u8) ^ (1 << Face::Down as u8),
+            0b111111 ^ (1 << Face::Up as u8) ^ (1 << Face::Down as u8),
+            0b111111 ^ (1 << Face::Front as u8) ^ (1 << Face::Back as u8),
+            0b111111 ^ (1 << Face::Front as u8) ^ (1 << Face::Back as u8),
+            0b111111 ^ (1 << Face::Right as u8) ^ (1 << Face::Left as u8),
+            0b111111 ^ (1 << Face::Right as u8) ^ (1 << Face::Left as u8),
         ];
-        let mut face_cnts = [0,0,0,0,0,0];
+        let mut face_cnts = [0, 0, 0, 0, 0, 0];
 
         for pos in Edge::edges() {
             let (t1, t2) = tiles_from_edge(pos);
@@ -247,18 +283,18 @@ impl TileMap {
             if let Some(face) = f1 {
                 face_cnts[face as usize] += 1;
                 if let Some(other_face) = f2 {
-                    edge_masks[face as usize] &= !(1<<(other_face as u8));
+                    edge_masks[face as usize] &= !(1 << (other_face as u8));
                 }
             }
             if let Some(face) = f2 {
                 face_cnts[face as usize] += 1;
                 if let Some(other_face) = f1 {
-                    edge_masks[face as usize] &= !(1<<(other_face as u8));
+                    edge_masks[face as usize] &= !(1 << (other_face as u8));
                 }
             }
         }
         let mut t_mask = 0;
-        for (face,&cnt) in face_cnts.iter().enumerate() {
+        for (face, &cnt) in face_cnts.iter().enumerate() {
             if cnt < 4 {
                 t_mask |= 1 << face;
             }
@@ -266,61 +302,61 @@ impl TileMap {
         for _ in 0..3 {
             for pos in Edge::edges() {
                 let (t1, t2) = tiles_from_edge(pos);
-                match ((tiles[t1],t1), (tiles[t2],t2)) {
-                    ((Some(face),_),(None,tile))| ((None,tile),(Some(face),_)) => {
+                match ((tiles[t1], t1), (tiles[t2], t2)) {
+                    ((Some(face), _), (None, tile)) | ((None, tile), (Some(face), _)) => {
                         let opt = (t_mask & edge_masks[face as usize]) as u8;
                         if opt.count_ones() != 1 {
                             continue;
                         }
-                        let fc: Face = unsafe {std::mem::transmute(opt.trailing_zeros() as u8) };
+                        let fc: Face = unsafe { std::mem::transmute(opt.trailing_zeros() as u8) };
                         tiles[tile] = Some(fc);
                         face_cnts[fc as usize] += 1;
                         edge_masks[fc as usize] &= !(1 << (face as u8));
                         edge_masks[face as usize] &= !(1 << (fc as u8));
                         if face_cnts[fc as usize] >= 4 {
-                            t_mask &= !(1 << (fc as u8)) 
+                            t_mask &= !(1 << (fc as u8))
                         }
                     }
-                    _ => {
-                    }
+                    _ => {}
                 }
             }
         }
-
     }
     pub fn edges(&self) -> Result<EdgeMap, TMErr> {
         let tiles = self.as_array();
         let mut raw = 0;
         for pos in Edge::edges() {
             let (t1, t2) = tiles_from_edge(pos);
-            let (edge, flip) = edge_from_faces(tiles[t1].ok_or(TMErr::MissingTile)?,
-                                               tiles[t2].ok_or(TMErr::MissingTile)?)
-                .ok_or(TMErr::InvalidPiece)?;
+            let (edge, flip) = edge_from_faces(
+                tiles[t1].ok_or(TMErr::MissingTile)?,
+                tiles[t2].ok_or(TMErr::MissingTile)?,
+            )
+            .ok_or(TMErr::InvalidPiece)?;
             let parity = flip as u64 ^ (((edge as u64 ^ pos as u64) >> 2) & 1);
             let offset = edge as u32;
-            raw |= parity << (4+offset*5);
-            raw |= (pos as u64) << (offset*5);
+            raw |= parity << (4 + offset * 5);
+            raw |= (pos as u64) << (offset * 5);
         }
         EdgeMap::from_raw(raw).map_err(|err| TMErr::Edge(err))
     }
 
     pub fn centers(&self) -> Result<CenterMap, TMErr> {
         let y1 = self.map[Face::Up as usize][4].ok_or(TMErr::MissingTile)? as u64;
-        let y2 = self.map[Face::Down as usize][4].ok_or(TMErr::MissingTile)?as u64;
-        if (y1 ^y2) != 1 {
+        let y2 = self.map[Face::Down as usize][4].ok_or(TMErr::MissingTile)? as u64;
+        if (y1 ^ y2) != 1 {
             return Err(TMErr::Center(MapError::Orientation));
         }
-        let x1 = self.map[Face::Front as usize][4].ok_or(TMErr::MissingTile)?as u64;
-        let x2 = self.map[Face::Back as usize][4].ok_or(TMErr::MissingTile)?as u64;
-        if (x1 ^x2) != 1 {
+        let x1 = self.map[Face::Front as usize][4].ok_or(TMErr::MissingTile)? as u64;
+        let x2 = self.map[Face::Back as usize][4].ok_or(TMErr::MissingTile)? as u64;
+        if (x1 ^ x2) != 1 {
             return Err(TMErr::Center(MapError::Orientation));
         }
-        let z1 = self.map[Face::Right as usize][4].ok_or(TMErr::MissingTile)?as u64;
-        let z2 = self.map[Face::Left as usize][4].ok_or(TMErr::MissingTile)?as u64;
-        if (z1 ^z2) != 1 {
+        let z1 = self.map[Face::Right as usize][4].ok_or(TMErr::MissingTile)? as u64;
+        let z2 = self.map[Face::Left as usize][4].ok_or(TMErr::MissingTile)? as u64;
+        if (z1 ^ z2) != 1 {
             return Err(TMErr::Center(MapError::Orientation));
         }
-        CenterMap::from_raw((y1 << 5) | (x1 << (8+5)) | (z1 << (16+5)))
+        CenterMap::from_raw((y1 << 5) | (x1 << (8 + 5)) | (z1 << (16 + 5)))
             .map(|centers| centers.inverse())
             .map_err(|err| TMErr::Center(err))
     }
@@ -329,34 +365,37 @@ impl TileMap {
         let mut raw = 0;
         for pos in Corner::corners() {
             let [t1, t2, t3] = tiles_from_corner(pos);
-            let (f1, f2, f3) = (tiles[t1].ok_or(TMErr::MissingTile)? as u64,
-                                tiles[t2].ok_or(TMErr::MissingTile)? as u64,
-                                tiles[t3].ok_or(TMErr::MissingTile)? as u64);
+            let (f1, f2, f3) = (
+                tiles[t1].ok_or(TMErr::MissingTile)? as u64,
+                tiles[t2].ok_or(TMErr::MissingTile)? as u64,
+                tiles[t3].ok_or(TMErr::MissingTile)? as u64,
+            );
             if (f1 ^ f2 ^ f3) & 0b110 != 0b110 {
                 return Err(TMErr::InvalidPiece); // sanity
             }
             // corner may still be wrong if 2-cycle in above faces thus test y_axis consistancty
-            let corner = ((f1&1) << (f1 >> 1)) | ((f2&1) << (f2 >> 1)) | ((f3&1) << (f3 >> 1));
+            let corner =
+                ((f1 & 1) << (f1 >> 1)) | ((f2 & 1) << (f2 >> 1)) | ((f3 & 1) << (f3 >> 1));
             let (mut twist, y_axis) = if (f1 & 0b110) == 0 {
-                (Twist::Ccw,f3)
+                (Twist::Ccw, f3)
             } else if (f2 & 0b110) == 0 {
-                (Twist::Identity,f1)
+                (Twist::Identity, f1)
             } else if (f3 & 0b110) == 0 {
-                (Twist::Cw,f2)
+                (Twist::Cw, f2)
             } else {
                 return Err(TMErr::InvalidPiece); // sanity
             };
 
-            if (((0b01101001_00) >> ((pos as u64) ^ (corner as u64))) ^ y_axis)&0b100 != 0 {
+            if (((0b01101001_00) >> ((pos as u64) ^ (corner as u64))) ^ y_axis) & 0b100 != 0 {
                 return Err(TMErr::InvalidPiece); // sanity
             }
 
-            let a =  pos as u64;
+            let a = pos as u64;
             if (a ^ (a >> 1) ^ (a >> 2)) & 0b1 == 1 {
                 twist = twist.inverse();
             }
-            raw |= (twist as u64) << (corner as u32*8 + 3);
-            raw |= (pos as u64) << (corner as u32*8);
+            raw |= (twist as u64) << (corner as u32 * 8 + 3);
+            raw |= (pos as u64) << (corner as u32 * 8);
         }
         CornerMap::from_raw(raw).map_err(|err| TMErr::Corner(err))
     }
@@ -400,12 +439,6 @@ impl TileMap {
     /// /gKHe7m+RgzkGmFuGMgIVQMZI8x0L+f/ai8XkJ2vSDHEqTFhOIfIbzjP4YIrzTlq1J7hjXsmzzPp
     /// NX0/8/f8/t8LNCWgt/byX1Vp2biqclFaAAAAAElFTkSuQmCC">
     /// </div>
-    pub fn terminal_display(&self) -> impl fmt::Display + '_ {
-        return TileMap3dFmt { fm: &self };
-    }
-    pub fn svg_display(&self) -> impl fmt::Display + '_ {
-        return TileMapSvgFmt { fm: &self };
-    }
     pub fn store_identity_centers(&mut self) {
         for face in Face::faces() {
             self.map[face as usize][4] = Some(face);
@@ -477,109 +510,6 @@ impl TileMap {
     }
 }
 
-struct TileMap3dFmt<'a> {
-    fm: &'a TileMap,
-}
-use std::fmt;
-impl fmt::Display for TileMap3dFmt<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let fm: &[Option<Face>; 54] = unsafe { std::mem::transmute(&self.fm.map) };
-
-        let color_code = |a: &Option<Face>| match a {
-            Some(Face::Up) => 226,    // yellow
-            Some(Face::Down) => 254,  // white
-            Some(Face::Front) => 196, // red
-            Some(Face::Back) => 214,  // orange
-            Some(Face::Right) => 76,  // greeen
-            Some(Face::Left) => 33,   // blue
-            None => 243,              // dark grey
-        };
-        let mut prev_style = 0;
-        for line in CLI_CUBE_IMAGE {
-            f.write_str("\x1b[38;5;232m")?;
-            for block in line.iter() {
-                let chr = [" ", "▄", "▀", "█"][(block & 0b11) as usize];
-                let face_index = (block >> 2) as usize;
-                let style = fm.get(face_index).map(color_code).unwrap_or(0);
-                if prev_style != style {
-                    if style == 0 {
-                        f.write_str("\x1b[49m")?;
-                    } else {
-                        write!(f, "\x1b[48;5;{}m", style)?;
-                    }
-                }
-                prev_style = style;
-                f.write_str(chr)?;
-            }
-            f.write_str("\x1b[0m\n")?;
-        }
-        Ok(())
-    }
-}
-
-struct TileMapSvgFmt<'a> {
-    fm: &'a TileMap,
-}
-impl fmt::Display for TileMapSvgFmt<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let tile_paths = &[
-            ["M249 52c-6-4-5-7 0-11l63-30c8-3 15-2 22 0l63 30c6 4 6 7 1 11l-63 31c-8 3-16 3-23 0z", 
-             "M352 103c-6-4-5-8 0-11l63-32c8-3 15-2 23 0l65 32c6 3 6 7 1 11l-63 32c-8 4-15 3-23 0z", 
-             "M460 156c-6-3-6-8 0-12l62-32c8-4 16-3 23 0l68 32c7 4 7 8 2 12l-63 34c-9 3-16 2-24 0z",
-             "M143 103c-7-4-5-8 1-11l65-32c7-3 15-2 23 0l62 32c7 3 6 7 0 11l-65 32c-8 3-16 3-23 0z",
-             "M246 156c-6-4-5-8 0-12l66-32c8-4 15-3 23 0l65 32c6 4 6 8 1 12l-66 34c-8 3-16 3-24 0z",
-             "M354 211c-7-4-6-8 0-12l65-34c8-3 16-2 24 0l68 34c6 4 6 8 1 12l-66 36c-8 3-16 2-24 0z",
-             "M32 156c-6-4-4-8 1-12l68-32c8-4 16-3 24 0l62 32c7 4 5 8 0 12l-68 34c-8 3-16 3-24 0z",  
-             "M135 211c-6-4-4-8 1-12l68-34c8-3 16-3 24 0l65 34c7 4 6 8 0 12l-68 36c-8 3-16 2-25 0z",
-             "M243 269c-7-4-6-9 0-13l68-35c8-4 16-3 24 0l69 35c6 4 6 9 0 13l-68 37c-8 4-17 3-25 0z"],
-            ["M100 305c0 8-4 10-11 8l-61-35c-7-4-11-13-12-20l-3-78c0-8 3-10 10-8l63 33c7 5 10 12 11 21z",
-             "M205 364c-1 8-5 9-12 8l-64-36c-7-6-10-13-12-21l-2-80c0-7 4-10 11-8l65 35c8 5 11 13 12 22z",
-             "M314 425c-1 8-5 10-12 7l-67-37c-8-5-11-13-12-21l-1-81c0-7 4-10 11-8l68 37c8 5 11 13 13 22z",
-             "M104 431c0 7-4 9-10 7l-61-35c-7-5-10-12-11-20l-4-76c0-7 4-10 11-7l61 34c7 5 10 12 12 21z",
-             "M207 491c0 8-5 9-11 7l-63-37c-7-6-10-12-12-20l-2-77c0-7 4-9 11-7l64 36c7 5 10 12 12 21z",
-             "M314 554c-1 7-5 9-12 6l-65-38c-8-5-11-12-12-21l-2-77c1-8 5-10 12-8l67 38c7 5 11 13 12 21z",
-             "M108 552c0 7-4 9-10 7l-60-37c-7-5-10-11-11-19l-3-73c0-7 3-10 10-7l60 35c8 5 10 12 12 21z",
-             "M209 613c0 8-5 9-11 7l-62-38c-7-5-10-12-11-20l-2-74c0-7 4-9 10-7l63 37c7 6 11 13 12 21z",
-             "M314 677c-1 8-5 9-11 6l-65-39c-7-5-10-12-12-20l-1-75c1-7 5-9 12-6l65 38c8 5 11 13 12 21z"],
-            ["M424 374c-1 9-6 16-12 21l-67 37c-8 4-11 0-12-7v-81c1-10 5-17 12-22l68-37c8-3 11 2 12 8z",
-             "M529 315c0 9-5 15-11 21l-65 36c-7 2-10-1-11-8l1-80c1-9 5-16 12-22l66-35c7-3 10 2 11 8z",
-             "M631 258c-1 9-5 15-12 20l-62 35c-7 3-9-1-10-8l2-79c1-9 5-15 12-21l63-33c7-2 9 1 10 8z",
-             "M422 501c-1 9-5 16-12 21l-65 38c-8 4-11 1-12-6v-79c0-9 5-15 12-21l67-38c7-3 10 1 11 8z",
-             "M526 441c-1 8-6 15-12 20l-63 37c-7 3-10 0-11-7l1-77c1-9 5-16 12-21l64-36c7-3 10 0 11 7z",
-             "M625 383c-1 8-5 14-11 20l-61 35c-7 3-10-1-11-7l3-76c1-9 5-15 12-21l61-34c7-4 10 0 10 7z",
-             "M420 624c-1 8-5 15-12 20l-64 39c-7 4-10 1-12-6v-75c1-9 6-15 12-21l66-38c7-4 10-1 11 6z",
-             "M522 562c-1 8-5 15-11 20l-62 38c-7 3-10 0-11-7l1-74c0-9 5-15 12-21l62-37c7-3 10 1 11 7z",
-             "M620 503c-1 8-5 14-11 19l-60 37c-7 3-10 0-10-7l2-73c1-9 5-15 11-21l61-35c7-3 9 1 10 7z"]
-        ];
-
-        // By default, `Front` is <span style="border-bottom:2px solid  #ff0000;">red</span> ,
-    // `Back` is <span style="border-bottom:2px solid  #ffaf00;">orange</span>,
-    // `Up` is <span style="border-bottom:2px solid  #ffff00;">yellow</span>,
-    // `Down` is <span style="border-bottom:2px solid  #e4e4e4;">white</span>,
-    // `Right` is <span style="border-bottom:2px solid  #5fd700;">green</span> and
-    // `Left` is <span style="border-bottom:2px solid  #0087ff;">blue</span>.
-        let color_code = |a: &Option<Face>| match a {
-            Some(Face::Up) => "#ffff00",    // yellow
-            Some(Face::Down) => "#efefef",  // white
-            Some(Face::Front) => "#f00", // red
-            Some(Face::Back) => "#ffaf00",  // orange
-            Some(Face::Right) => "#5fd700",  // greeen
-            Some(Face::Left) => "#0088ff",   // blue
-            None => "#333",              // dark grey
-        };
-
-        f.write_str("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"645\" height=\"700\">")?;
-        let border_path = "M322 0c-15 0-27 9-40 15l-41 19c-11 4-4 23-17 16-17-3-31 8-46 14l-43 22c-12 4-4 23-18 15-17-3-31 8-46 14l-47 23c-10 9-18 15-22 30-2 10-1 26-1 38 1 20 1 39 3 58 0 10 12 22 14 26-12 4-13 17-12 28l3 69c-1 11 14 23 12 27-11 6-10 20-9 30l3 65c2 14 12 24 24 30l54 33c9 7 22-11 22 5 6 16 22 22 35 30l43 26c7 5 18-2 22-2 2 14 12 24 24 30 19 12 42 23 61 34 13 7 30 7 42 3l28-15 46-29c9-4 12-21 16-23 9 8 21 2 30-4l55-34c9-4 12-23 17-22 11 7 22-1 31-7l50-31c11-8 16-22 15-36l3-66c0-13-10-16-12-19 11-9 15-23 15-36l2-68c0-18-11-16-12-19 12-9 15-24 15-38l3-77c-4-30-29-37-50-49-16-7-32-16-48-22-9-5-24 0-28-2 1-14-13-18-23-23l-55-26c-8-6-25 1-28-3 0-14-15-17-25-23L335 2l-13-2z";
-        write!(f, "<path d=\"{}\" fill=\"{}\"/>", border_path, "#111")?;
-        for (paths, tiles) in tile_paths.iter().zip(self.fm.map.iter().step_by(2)) {
-            for (path, tile) in paths.iter().zip(tiles.iter()) {
-                writeln!(f, "<path d=\"{}\" fill=\"{}\"/>", path, color_code(tile))?;
-            }
-        }
-        f.write_str("</svg>")
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -587,28 +517,31 @@ mod tests {
     #[test]
     fn center_extraction() {
         for rotation_cube in crate::moves::ROTATION_TABLE {
-            let tm:TileMap = rotation_cube.centers().into();
+            let tm: TileMap = rotation_cube.centers().into();
             assert_eq!(tm.centers(), Ok(rotation_cube.centers()));
         }
     }
     #[test]
     fn corner_extraction() {
         use crate::Move;
-        let tilemap:TileMap =( CornerMap::default()*Move::F2 ).into();
-        assert_eq!(tilemap.corners(), Ok( CornerMap::default() * Move::F2) );
+        let tilemap: TileMap = (CornerMap::default() * Move::F2).into();
+        assert_eq!(tilemap.corners(), Ok(CornerMap::default() * Move::F2));
 
-        let tilemap:TileMap =( CornerMap::default()*Move::Fcw ).into();
-        assert_eq!(tilemap.corners(), Ok( CornerMap::default() * Move::Fcw) );
+        let tilemap: TileMap = (CornerMap::default() * Move::Fcw).into();
+        assert_eq!(tilemap.corners(), Ok(CornerMap::default() * Move::Fcw));
 
-        let cube = Move::Fcw.corners()*Move::Lcw*Move::Bcw*Move::U2*Move::Dccw;
-        let tilemap:TileMap =( cube ).into();
-        assert_eq!(tilemap.corners(), Ok( cube) );
+        let cube = Move::Fcw.corners() * Move::Lcw * Move::Bcw * Move::U2 * Move::Dccw;
+        let tilemap: TileMap = (cube).into();
+        assert_eq!(tilemap.corners(), Ok(cube));
     }
     #[test]
     fn edge_extraction() {
         use crate::Move;
-        let tilemap:TileMap =( EdgeMap::default() * Move::Rcw * Move::Lcw).into();
-        assert_eq!(tilemap.edges(), Ok( EdgeMap::default()* Move::Rcw * Move::Lcw) )
+        let tilemap: TileMap = (EdgeMap::default() * Move::Rcw * Move::Lcw).into();
+        assert_eq!(
+            tilemap.edges(),
+            Ok(EdgeMap::default() * Move::Rcw * Move::Lcw)
+        )
     }
     #[test]
     fn tile_rotations_conversions() {
@@ -650,195 +583,3 @@ mod tests {
         }
     }
 }
-
-pub const CLI_CUBE_IMAGE: &[[u8; 69]] = &[
-    [
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDD, 0xDD, 0xB6, 0xDF, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDD, 0xDD, 0x02, 0x02, 0xDD, 0xDD, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDF, 0x76, 0xDD, 0xDD, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-    ],
-    [
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDD, 0xDD, 0xB6, 0xB6,
-        0xB4, 0xB4, 0xB4, 0xDF, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDD, 0xDD,
-        0x02, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x02, 0xDD, 0xDD, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDF, 0x74, 0x74, 0x74, 0x76, 0x76, 0xDD, 0xDD, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-    ],
-    [
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDD, 0xDD, 0xBA, 0xBA, 0xB8, 0xDF, 0xB4, 0xB4,
-        0xB4, 0xB4, 0xB4, 0xDF, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDD, 0xDD, 0x0E, 0x0E, 0x0C, 0x0C,
-        0x0E, 0x0E, 0x01, 0x01, 0x00, 0x00, 0x01, 0x01, 0x06, 0x06, 0x04, 0x04, 0x06, 0x06, 0xDD,
-        0xDD, 0xDC, 0xDC, 0xDC, 0xDC, 0xDF, 0x74, 0x74, 0x74, 0x74, 0x74, 0xDF, 0x70, 0x72, 0x72,
-        0xDD, 0xDD, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-    ],
-    [
-        0xDC, 0xDC, 0xDC, 0xDD, 0xDD, 0xBE, 0xDF, 0xB8, 0xB8, 0xB8, 0xB8, 0xB8, 0xDF, 0xB4, 0xB4,
-        0xB5, 0xB5, 0xC2, 0xDF, 0xDC, 0xDD, 0xDD, 0x1A, 0x1A, 0x0D, 0x0D, 0x0C, 0x0C, 0x0C, 0x0C,
-        0x0C, 0x0C, 0x0D, 0x0D, 0x12, 0x12, 0x05, 0x05, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x05,
-        0x05, 0x0A, 0x0A, 0xDD, 0xDD, 0xDF, 0x82, 0x75, 0x75, 0x74, 0x74, 0xDF, 0x70, 0x70, 0x70,
-        0x70, 0x70, 0xDF, 0x6E, 0xDD, 0xDD, 0xDC, 0xDC, 0xDC,
-    ],
-    [
-        0xDD, 0xBE, 0xBE, 0xBC, 0xBC, 0xBC, 0xDF, 0xB8, 0xB8, 0xB8, 0xB8, 0xB9, 0xDF, 0xC2, 0xC2,
-        0xC0, 0xC1, 0xC1, 0x1A, 0x1A, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x1A, 0x1A, 0x0D, 0x0D,
-        0x12, 0x12, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x12, 0x12, 0x05, 0x05, 0x0A, 0x0A, 0x08,
-        0x08, 0x08, 0x08, 0x08, 0x08, 0x0A, 0x0A, 0x81, 0x80, 0x82, 0x82, 0xDF, 0x71, 0x70, 0x70,
-        0x70, 0x70, 0xDF, 0x6C, 0x6C, 0x6C, 0x6E, 0x6E, 0xDD,
-    ],
-    [
-        0xDF, 0xBC, 0xBC, 0xBC, 0xBC, 0xBC, 0xDF, 0xB9, 0xB9, 0xC6, 0xC6, 0xC4, 0xDF, 0xC0, 0xC0,
-        0xC0, 0xDF, 0x48, 0x4A, 0x4A, 0x19, 0x19, 0x18, 0x18, 0x19, 0x19, 0x1E, 0x1E, 0x1C, 0x1C,
-        0x1E, 0x1E, 0x11, 0x11, 0x10, 0x10, 0x11, 0x11, 0x16, 0x16, 0x14, 0x14, 0x16, 0x16, 0x09,
-        0x09, 0x08, 0x08, 0x09, 0x09, 0x9A, 0x9A, 0xDF, 0x80, 0x80, 0x80, 0xDF, 0x7C, 0x7E, 0x7E,
-        0x71, 0x71, 0xDF, 0x6C, 0x6C, 0x6C, 0x6C, 0x6C, 0xDF,
-    ],
-    [
-        0xDF, 0xBC, 0xBC, 0xBD, 0xBD, 0xCA, 0xDF, 0xC4, 0xC4, 0xC4, 0xC4, 0xC4, 0xDF, 0xC0, 0xC0,
-        0xC1, 0xDF, 0x48, 0x48, 0x48, 0x48, 0x48, 0xDF, 0x4E, 0x1D, 0x1D, 0x1C, 0x1C, 0x1C, 0x1C,
-        0x1C, 0x1C, 0x1D, 0x1D, 0x22, 0x22, 0x15, 0x15, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x15,
-        0x15, 0xDF, 0x9A, 0x98, 0x98, 0x98, 0x98, 0xDF, 0x81, 0x80, 0x80, 0xDF, 0x7C, 0x7C, 0x7C,
-        0x7C, 0x7C, 0xDF, 0x7A, 0x6D, 0x6D, 0x6C, 0x6C, 0xDF,
-    ],
-    [
-        0xDF, 0xCA, 0xCA, 0xC8, 0xC8, 0xC8, 0xDF, 0xC4, 0xC4, 0xC4, 0xC4, 0xC5, 0xDF, 0xCE, 0xCE,
-        0xCC, 0xDF, 0x49, 0x48, 0x48, 0x48, 0x48, 0xDF, 0x4C, 0x4C, 0x4C, 0x4E, 0x4E, 0x1D, 0x1D,
-        0x22, 0x22, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x22, 0x22, 0x15, 0x15, 0x96, 0x96, 0x94,
-        0x94, 0xDF, 0x98, 0x98, 0x98, 0x98, 0x98, 0xDF, 0x8C, 0x8E, 0x8E, 0xDF, 0x7D, 0x7C, 0x7C,
-        0x7C, 0x7C, 0xDF, 0x78, 0x78, 0x78, 0x7A, 0x7A, 0xDF,
-    ],
-    [
-        0xDF, 0xC8, 0xC8, 0xC8, 0xC8, 0xC8, 0xDF, 0xC5, 0xC5, 0xD2, 0xD2, 0xD0, 0xDF, 0xCC, 0xCC,
-        0xCC, 0xDF, 0x54, 0x56, 0x56, 0x49, 0x49, 0xDF, 0x4C, 0x4C, 0x4C, 0x4C, 0x4C, 0xDF, 0x50,
-        0x52, 0x52, 0x21, 0x21, 0x20, 0x20, 0x21, 0x21, 0x92, 0x92, 0xDF, 0x94, 0x94, 0x94, 0x94,
-        0x94, 0xDF, 0x98, 0x99, 0x99, 0xA6, 0xA6, 0xDF, 0x8C, 0x8C, 0x8C, 0xDF, 0x88, 0x8A, 0x8A,
-        0x7D, 0x7D, 0xDF, 0x78, 0x78, 0x78, 0x78, 0x78, 0xDF,
-    ],
-    [
-        0xDF, 0xC8, 0xC8, 0xC9, 0xC9, 0xD6, 0xDF, 0xD0, 0xD0, 0xD0, 0xD0, 0xD0, 0xDF, 0xCC, 0xCC,
-        0xCD, 0xDF, 0x54, 0x54, 0x54, 0x54, 0x54, 0xDF, 0x5A, 0x4D, 0x4D, 0x4C, 0x4C, 0xDF, 0x50,
-        0x50, 0x50, 0x50, 0x50, 0xDF, 0x92, 0x90, 0x90, 0x90, 0x90, 0xDF, 0x94, 0x94, 0x94, 0x95,
-        0x95, 0xDF, 0xA6, 0xA4, 0xA4, 0xA4, 0xA4, 0xDF, 0x8D, 0x8C, 0x8C, 0xDF, 0x88, 0x88, 0x88,
-        0x88, 0x88, 0xDF, 0x86, 0x79, 0x79, 0x78, 0x78, 0xDF,
-    ],
-    [
-        0xDF, 0xD6, 0xD6, 0xD4, 0xD4, 0xD4, 0xDF, 0xD0, 0xD0, 0xD0, 0xD0, 0xD1, 0xDF, 0xDE, 0xDE,
-        0xDC, 0xDF, 0x55, 0x54, 0x54, 0x54, 0x54, 0xDF, 0x58, 0x58, 0x58, 0x5A, 0x5A, 0xDF, 0x51,
-        0x50, 0x50, 0x50, 0x50, 0xDF, 0x90, 0x90, 0x90, 0x90, 0x90, 0xDF, 0x95, 0xA2, 0xA2, 0xA0,
-        0xA0, 0xDF, 0xA4, 0xA4, 0xA4, 0xA4, 0xA4, 0xDF, 0xDC, 0xDE, 0xDE, 0xDF, 0x89, 0x88, 0x88,
-        0x88, 0x88, 0xDF, 0x84, 0x84, 0x84, 0x86, 0x86, 0xDF,
-    ],
-    [
-        0xDF, 0xD4, 0xD4, 0xD4, 0xD4, 0xD4, 0xDF, 0xD1, 0xD1, 0xDE, 0xDE, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDF, 0x60, 0x62, 0x62, 0x55, 0x55, 0xDF, 0x58, 0x58, 0x58, 0x58, 0x58, 0xDF, 0x5C,
-        0x5E, 0x5E, 0x51, 0x51, 0xDF, 0x90, 0x91, 0x91, 0x9E, 0x9E, 0xDF, 0xA0, 0xA0, 0xA0, 0xA0,
-        0xA0, 0xDF, 0xA4, 0xA5, 0xA5, 0xB2, 0xB2, 0xDF, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDE, 0xDE,
-        0x89, 0x89, 0xDF, 0x84, 0x84, 0x84, 0x84, 0x84, 0xDF,
-    ],
-    [
-        0xDF, 0xD4, 0xD4, 0xD5, 0xD5, 0xDE, 0xDE, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDF, 0x60, 0x60, 0x60, 0x60, 0x60, 0xDF, 0x66, 0x59, 0x59, 0x58, 0x58, 0xDF, 0x5C,
-        0x5C, 0x5C, 0x5C, 0x5C, 0xDF, 0x9E, 0x9C, 0x9C, 0x9C, 0x9C, 0xDF, 0xA0, 0xA0, 0xA0, 0xA1,
-        0xA1, 0xDF, 0xB2, 0xB0, 0xB0, 0xB0, 0xB0, 0xDF, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDE, 0xDE, 0x85, 0x85, 0x84, 0x84, 0xDF,
-    ],
-    [
-        0xDF, 0xDE, 0xDE, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDF, 0x61, 0x60, 0x60, 0x60, 0x60, 0xDF, 0x64, 0x64, 0x64, 0x66, 0x66, 0xDF, 0x5D,
-        0x5C, 0x5C, 0x5C, 0x5C, 0xDF, 0x9C, 0x9C, 0x9C, 0x9C, 0x9C, 0xDF, 0xA1, 0xAE, 0xAE, 0xAC,
-        0xAC, 0xDF, 0xB0, 0xB0, 0xB0, 0xB0, 0xB0, 0xDF, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDE, 0xDE, 0xDF,
-    ],
-    [
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDE, 0xDE, 0x61, 0x61, 0xDF, 0x64, 0x64, 0x64, 0x64, 0x64, 0xDF, 0x68,
-        0x6A, 0x6A, 0x5D, 0x5D, 0xDF, 0x9C, 0x9D, 0x9D, 0xAA, 0xAA, 0xDF, 0xAC, 0xAC, 0xAC, 0xAC,
-        0xAC, 0xDF, 0xB0, 0xB1, 0xB1, 0xDE, 0xDE, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-    ],
-    [
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDE, 0xDE, 0x65, 0x65, 0x64, 0x64, 0xDF, 0x68,
-        0x68, 0x68, 0x68, 0x68, 0xDF, 0xAA, 0xA8, 0xA8, 0xA8, 0xA8, 0xDF, 0xAC, 0xAC, 0xAC, 0xAD,
-        0xAD, 0xDE, 0xDE, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-    ],
-    [
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDE, 0xDE, 0xDF, 0x69,
-        0x68, 0x68, 0x68, 0x68, 0xDF, 0xA8, 0xA8, 0xA8, 0xA8, 0xA8, 0xDF, 0xAD, 0xDE, 0xDE, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-    ],
-    [
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDE, 0xDE, 0x69, 0x69, 0xDF, 0xA8, 0xA9, 0xA9, 0xDE, 0xDE, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-    ],
-    [
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDD, 0xDD,
-        0x3E, 0x3E, 0x3C, 0x3C, 0x3E, 0x3E, 0x3C, 0x3C, 0x3E, 0x3E, 0xDD, 0xDD, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-    ],
-    [
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDD, 0xDD, 0x32, 0x32, 0x30, 0x30,
-        0x32, 0x32, 0x3D, 0x3D, 0x3C, 0x3C, 0x3D, 0x3D, 0x42, 0x42, 0x40, 0x40, 0x42, 0x42, 0xDD,
-        0xDD, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-    ],
-    [
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDD, 0xDD, 0x26, 0x26, 0x31, 0x31, 0x30, 0x30, 0x30, 0x30,
-        0x30, 0x30, 0x31, 0x31, 0x36, 0x36, 0x41, 0x41, 0x40, 0x40, 0x40, 0x40, 0x40, 0x40, 0x41,
-        0x41, 0x46, 0x46, 0xDD, 0xDD, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-    ],
-    [
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDD, 0xDD, 0x26, 0x26, 0x24, 0x24, 0x24, 0x24, 0x24, 0x24, 0x26, 0x26, 0x31, 0x31,
-        0x36, 0x36, 0x34, 0x34, 0x34, 0x34, 0x34, 0x34, 0x36, 0x36, 0x41, 0x41, 0x46, 0x46, 0x44,
-        0x44, 0x44, 0x44, 0x44, 0x44, 0x46, 0x46, 0xDD, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-    ],
-    [
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDE, 0xDE, 0x25, 0x25, 0x24, 0x24, 0x25, 0x25, 0x2A, 0x2A, 0x28, 0x28,
-        0x2A, 0x2A, 0x35, 0x35, 0x34, 0x34, 0x35, 0x35, 0x3A, 0x3A, 0x38, 0x38, 0x3A, 0x3A, 0x45,
-        0x45, 0x44, 0x44, 0x45, 0x45, 0xDE, 0xDE, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-    ],
-    [
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDE, 0xDE, 0x29, 0x29, 0x28, 0x28, 0x28, 0x28,
-        0x28, 0x28, 0x29, 0x29, 0x2E, 0x2E, 0x39, 0x39, 0x38, 0x38, 0x38, 0x38, 0x38, 0x38, 0x39,
-        0x39, 0xDE, 0xDE, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-    ],
-    [
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDE, 0xDE, 0x29, 0x29,
-        0x2E, 0x2E, 0x2C, 0x2C, 0x2C, 0x2C, 0x2C, 0x2C, 0x2E, 0x2E, 0x39, 0x39, 0xDE, 0xDE, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-    ],
-    [
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDE, 0xDE, 0x2D, 0x2D, 0x2C, 0x2C, 0x2D, 0x2D, 0xDE, 0xDE, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-    ],
-    [
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDE, 0xDE, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-        0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC, 0xDC,
-    ],
-];

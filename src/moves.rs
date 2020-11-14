@@ -148,7 +148,7 @@ impl From<Move> for CornerMap {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq,Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 #[repr(u8)]
 pub enum MoveAngle {
     Cw,
@@ -158,17 +158,15 @@ pub enum MoveAngle {
 impl MoveAngle {
     pub fn radians(self) -> f32 {
         use std::f32::consts::PI;
-        match self  {
-            MoveAngle::Cw => -PI/2.0,
+        match self {
+            MoveAngle::Cw => -PI / 2.0,
             MoveAngle::Two => -PI,
-            MoveAngle::Ccw => PI/2.0
+            MoveAngle::Ccw => PI / 2.0,
         }
     }
-
 }
 
-
-#[derive(Copy, Clone, PartialEq, Eq,Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 #[repr(u8)]
 pub enum MoveKind {
     Face,
@@ -184,7 +182,7 @@ impl Move {
     pub fn new(kind: MoveKind, face: Face, angle: MoveAngle) -> Move {
         use Move::*;
         match kind {
-            MoveKind::Face => FaceMove::new(face,angle).into(),
+            MoveKind::Face => FaceMove::new(face, angle).into(),
             MoveKind::Rotation => {
                 // let rotation = 27 + ((face as u8)>>1)*3 + angle as u8;
                 // let mv:Move = unsafe{ mem::transmute(rotation)};
@@ -193,16 +191,14 @@ impl Move {
                 // } else {
                 //     mv
                 // }
-                let map:&[Move;18] = &[
-                    Ycw, Y2, Yccw, Yccw, Y2, Ycw,//
-                    Zcw, Z2, Zccw, Zccw, Z2, Zcw,//
-                    Xcw, X2, Xccw, Xccw, X2, Xcw,//
+                let map: &[Move; 18] = &[
+                    Ycw, Y2, Yccw, Yccw, Y2, Ycw, //
+                    Zcw, Z2, Zccw, Zccw, Z2, Zcw, //
+                    Xcw, X2, Xccw, Xccw, X2, Xcw, //
                 ];
                 // Safety: Face <= 5, Angle <= 3 thus face+3*angle<=18.
-                unsafe{
-                    *map.get_unchecked(face as usize*3+angle as usize)
-                }
-            },
+                unsafe { *map.get_unchecked(face as usize * 3 + angle as usize) }
+            }
             MoveKind::Slice => {
                 // let rotation = 18 + (((face as u8)>> 1)*3) + angle as u8;
                 // let mv:Move = unsafe{ mem::transmute(rotation) };
@@ -212,29 +208,31 @@ impl Move {
                 // } else {
                 //     mv
                 // }
-                let map: &[Move;18] = &[
-                    Eccw, E2, Ecw, Ecw, E2, Eccw,//
-                    Scw, S2, Sccw, Sccw, S2, Scw,//
-                    Mccw, M2, Mcw, Mcw, M2, Mccw //
+                let map: &[Move; 18] = &[
+                    Eccw, E2, Ecw, Ecw, E2, Eccw, //
+                    Scw, S2, Sccw, Sccw, S2, Scw, //
+                    Mccw, M2, Mcw, Mcw, M2, Mccw, //
                 ];
 
                 // Safety: Face <= 5, Angle <= 3 thus face+3*angle<=18.
-                unsafe{
-                    *map.get_unchecked(face as usize*3+angle as usize)
-                }
+                unsafe { *map.get_unchecked(face as usize * 3 + angle as usize) }
             }
         }
     }
     pub fn face(self) -> Face {
         use Face::*;
-        (&[Up,Down,Front,
-           Back,Right,Left,
-           Down,Front,Left,
-           Up,Front,Right])[self as usize /3]
+        (&[
+            Up, Down, Front, Back, Right, Left, Down, Front, Left, Up, Front, Right,
+        ])[self as usize / 3]
     }
     pub fn kind(self) -> MoveKind {
-// MoveKind::Face
-        (&[MoveKind::Face,MoveKind::Face,MoveKind::Slice,MoveKind::Rotation])[self as usize /9]
+        // MoveKind::Face
+        (&[
+            MoveKind::Face,
+            MoveKind::Face,
+            MoveKind::Slice,
+            MoveKind::Rotation,
+        ])[self as usize / 9]
     }
     // An iterator over all the `Turn` variants.
     pub fn moves() -> impl Iterator<Item = Move> {
@@ -250,7 +248,7 @@ impl Move {
     }
 
     #[inline]
-    pub fn set_angle(self, angle:MoveAngle) -> Move {
+    pub fn set_angle(self, angle: MoveAngle) -> Move {
         let v = self as u8;
         unsafe { mem::transmute((angle as u8) + v - (v % 3)) }
     }
@@ -503,8 +501,10 @@ mod tests {
     fn center_index_rotation_table() {
         for (index, cube) in ROTATION_TABLE.iter().enumerate() {
             assert_eq!(index, cube.centers().index() as usize);
-            assert_eq!(cube.corners().permutation_parity() ^ cube.edges().permutation_parity(),
-                       cube.centers().permutation_parity());
+            assert_eq!(
+                cube.corners().permutation_parity() ^ cube.edges().permutation_parity(),
+                cube.centers().permutation_parity()
+            );
         }
     }
 

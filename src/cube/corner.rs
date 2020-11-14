@@ -1,4 +1,4 @@
-use crate::{FaceMove, TileMap, MapError};
+use crate::{FaceMove, MapError, TileMap};
 
 /// Represents a corner cubie on the 3x3 cube by position.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -44,7 +44,7 @@ impl std::convert::From<u8> for Corner {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq,Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Twist {
     Identity,
@@ -101,15 +101,15 @@ impl std::fmt::Debug for CornerMap {
     }
 }
 
-#[derive(Copy,Clone,PartialEq,Eq,Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 #[repr(transparent)]
 pub struct COIndex(pub u32);
 
 impl COIndex {
-    pub const SIZE: u32 = 2187; // 3^8 
+    pub const SIZE: u32 = 2187; // 3^8
 }
 
-#[derive(Copy,Clone,PartialEq,Eq,Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 #[repr(transparent)]
 pub struct CPIndex(pub u32);
 
@@ -118,7 +118,6 @@ impl CPIndex {
 }
 
 impl CornerMap {
-
     pub fn get(&self, corner: Corner) -> (Corner, Twist) {
         let m = (self.raw >> (8 * corner as u64)) as u8;
         unsafe { (Corner::from(m), transmute(m >> 3)) }
@@ -133,7 +132,9 @@ impl CornerMap {
             (corner, (position, ori))
         })
     }
-    pub fn from_iter(iter: impl Iterator<Item = (Corner, (Corner, Twist))>) -> Result<CornerMap, MapError> {
+    pub fn from_iter(
+        iter: impl Iterator<Item = (Corner, (Corner, Twist))>,
+    ) -> Result<CornerMap, MapError> {
         let mut res = 0x0706050403020100;
         for (corner, (pos, ori)) in iter {
             res &= !(0xffu64 << ((corner as u64) * 8));
@@ -185,12 +186,10 @@ impl CornerMap {
     //     })).unwrap()
     // }
 
-
-
     pub(crate) fn orientation_residue(self) -> Twist {
-        let res = ((((self.raw&0x1818_1818_1818_1818)
-        ).wrapping_mul(0x01010101_01010101))>>57) as u8;
-        unsafe { transmute((res ) % 3) }
+        let res =
+            (((self.raw & 0x1818_1818_1818_1818).wrapping_mul(0x01010101_01010101)) >> 57) as u8;
+        unsafe { transmute((res) % 3) }
     }
 
     pub fn is_solved(self) -> bool {
@@ -198,19 +197,19 @@ impl CornerMap {
     }
 
     /// Returns true if the Map represents a well-defined permutation in range.
-    /// In safe user code this should ALWAYS return true. A valid cube may still 
+    /// In safe user code this should ALWAYS return true. A valid cube may still
     /// be unsolvable.
-    pub(crate) fn validate(self) -> Result<(),MapError> {
-        if (self.raw & 0xe0e0e0e0_e0e0e0e0) != 0 { 
+    pub(crate) fn validate(self) -> Result<(), MapError> {
+        if (self.raw & 0xe0e0e0e0_e0e0e0e0) != 0 {
             return Err(MapError::OutOfBounds); // extra bits
         }
-        if (self.raw & (self.raw >> 1) & 0x08_08_08_08_08_08_08_08) != 0 { 
+        if (self.raw & (self.raw >> 1) & 0x08_08_08_08_08_08_08_08) != 0 {
             return Err(MapError::OutOfBounds); // extra bits
         }
         // cannot use CornerMap::iter since it assumes validity
         let mut corners_mask = 0u32;
         for i in 0..8 {
-            let v = (self.raw >> (i*8))&0b111;
+            let v = (self.raw >> (i * 8)) & 0b111;
             corners_mask |= 1 << v;
         }
         if corners_mask != 0b1111_1111 {
@@ -223,8 +222,9 @@ impl CornerMap {
     }
     pub fn permutation_parity(self) -> bool {
         let mut transc = false;
-        { // WALK edge permutation in discrete cycle form
-            let mut rem =  0b1111_1110u32;
+        {
+            // WALK edge permutation in discrete cycle form
+            let mut rem = 0b1111_1110u32;
             let mut at = Corner::URF;
             // print!("({:?}", at)
             while rem != 0 {
@@ -236,7 +236,7 @@ impl CornerMap {
                     // print!(" {:?}", at);
                     continue;
                 }
-                at = unsafe{std::mem::transmute(rem.trailing_zeros() as u8)};
+                at = unsafe { std::mem::transmute(rem.trailing_zeros() as u8) };
                 rem ^= 1u32 << (at as u8);
                 // print!(")({:?}", at);
             }
@@ -254,12 +254,14 @@ impl CornerMap {
         let x_cmp = s_mask - ((x >> 16) + dist); //Shift a CHEC CHANGE
         let acc = ((x & section(0)) as u32) * 5040;
         let x = x >> 8; //Shift allows s CHANGE
-        CPIndex(acc + (((x_cmp + (x & section(0)).wrapping_mul(dist)) & s_mask).count_ones() * 720)
-            + (((x_cmp + (x & section(1)).wrapping_mul(dist)) & s_mask).count_ones() * 120)
-            + (((x_cmp + (x & section(2)).wrapping_mul(dist)) & s_mask).count_ones() * 24)
-            + (((x_cmp + (x & section(3)).wrapping_mul(dist)) & s_mask).count_ones() * 6)
-            + (((x_cmp + (x & section(4)).wrapping_mul(dist)) & s_mask).count_ones() * 2)
-            + (((x_cmp + (x & section(5)).wrapping_mul(dist)) & s_mask).count_ones() * 1))
+        CPIndex(
+            acc + (((x_cmp + (x & section(0)).wrapping_mul(dist)) & s_mask).count_ones() * 720)
+                + (((x_cmp + (x & section(1)).wrapping_mul(dist)) & s_mask).count_ones() * 120)
+                + (((x_cmp + (x & section(2)).wrapping_mul(dist)) & s_mask).count_ones() * 24)
+                + (((x_cmp + (x & section(3)).wrapping_mul(dist)) & s_mask).count_ones() * 6)
+                + (((x_cmp + (x & section(4)).wrapping_mul(dist)) & s_mask).count_ones() * 2)
+                + (((x_cmp + (x & section(5)).wrapping_mul(dist)) & s_mask).count_ones() * 1),
+        )
     }
     pub fn set_permutation_index(&mut self, index: CPIndex) {
         let mut idx = index.0 as u32;
@@ -315,7 +317,6 @@ impl CornerMap {
         self.raw |= res;
         // self.fix_orientation();
     }
-
 }
 
 #[inline]
@@ -436,17 +437,16 @@ impl std::convert::From<FaceMove> for CornerMap {
     }
 }
 
-
 /// #Raw Interface
 /// todo document
 impl CornerMap {
     pub fn from_raw(raw: u64) -> Result<CornerMap, MapError> {
-        let cm = CornerMap{raw};
+        let cm = CornerMap { raw };
         cm.validate().map(|_| cm)
     }
-    
+
     pub unsafe fn from_raw_unchecked(raw: u64) -> CornerMap {
-        CornerMap{raw}
+        CornerMap { raw }
     }
 
     pub fn raw(self) -> u64 {

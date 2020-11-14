@@ -89,7 +89,7 @@ impl CenterMap {
         // }
         // eprintln!("{:0b}",parity_mask);
         let parity_mask = 0b111100110011000000111100;
-        (parity_mask >> self.index())&0b1 == 1
+        (parity_mask >> self.index()) & 0b1 == 1
     }
     pub fn index(self) -> u8 {
         let mut index = (self.raw & 0xE0_E0_C0) * (10 + (1 << 8) * 1 + (1 << 16) * 7);
@@ -116,12 +116,12 @@ impl CenterMap {
 /// todo document
 impl CenterMap {
     pub fn from_raw(raw: u64) -> Result<CenterMap, MapError> {
-        let cm = CenterMap{raw};
-        cm.validate().map(|_|cm) 
+        let cm = CenterMap { raw };
+        cm.validate().map(|_| cm)
     }
-    
+
     pub unsafe fn from_raw_unchecked(raw: u64) -> CenterMap {
-        CenterMap{raw}
+        CenterMap { raw }
     }
 
     pub fn raw(self) -> u64 {

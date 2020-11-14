@@ -7,8 +7,8 @@ pub mod center;
 pub mod corner;
 pub mod edge;
 mod fixed_centers_cube;
-pub use self::fixed_centers_cube::FixedCentersCube;
 pub use self::edge::Edge;
+pub use self::fixed_centers_cube::FixedCentersCube;
 
 /// Stores both the centers and corners in a single u64. Used in
 /// cube to optimize for size.
@@ -53,10 +53,10 @@ impl Default for Cube {
 
 /// # Components
 impl Cube {
-    pub fn new(centers: CenterMap, corners: CornerMap, edges:EdgeMap) -> Cube {
+    pub fn new(centers: CenterMap, corners: CornerMap, edges: EdgeMap) -> Cube {
         Cube {
             centered_corners: CenteredCornerMap::new(centers, corners),
-            edges
+            edges,
         }
     }
     pub fn corners(&self) -> CornerMap {
@@ -70,26 +70,24 @@ impl Cube {
     }
 
     pub fn set_corners(&mut self, corners: CornerMap) {
-        self.centered_corners= CenteredCornerMap::new(self.centers(), corners);
+        self.centered_corners = CenteredCornerMap::new(self.centers(), corners);
     }
-    pub fn set_edges(&mut self, edges: EdgeMap)  {
+    pub fn set_edges(&mut self, edges: EdgeMap) {
         self.edges = edges;
     }
     pub fn set_centers(&mut self, centers: CenterMap) {
-        self.centered_corners= CenteredCornerMap::new(centers, self.corners());
+        self.centered_corners = CenteredCornerMap::new(centers, self.corners());
     }
-
 }
 impl Cube {
-
-    pub const fn raw(self) -> (u64,u64) {
+    pub const fn raw(self) -> (u64, u64) {
         (self.centered_corners.raw, self.edges.raw)
     }
 
     pub fn from_raw(centered_corners: u64, edges: u64) -> Result<Cube, MapError> {
         let cube = Cube {
             centered_corners: CenteredCornerMap {
-                raw: centered_corners &0x1f_1f1f1f1fffffff,
+                raw: centered_corners & 0x1f_1f1f1f1fffffff,
             },
             edges: EdgeMap { raw: edges },
         };
@@ -122,16 +120,18 @@ impl Cube {
         }
     }
 
-    pub fn has_solution(self) -> bool  {
+    pub fn has_solution(self) -> bool {
         self.corners().orientation_residue().is_identity()
             && self.edges().orientation_residue().is_identity()
-            && (self.edges.permutation_parity() ^
-                self.corners().permutation_parity() ^
-                self.centers().permutation_parity()) == false
+            && (self.edges.permutation_parity()
+                ^ self.corners().permutation_parity()
+                ^ self.centers().permutation_parity())
+                == false
     }
 
-    pub fn validate(self) -> Result<(),MapError>  {
-        self.edges.validate()
+    pub fn validate(self) -> Result<(), MapError> {
+        self.edges
+            .validate()
             .and_then(|_| self.corners().validate())
             .and_then(|_| self.centers().validate())
     }

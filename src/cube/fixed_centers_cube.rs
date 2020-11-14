@@ -1,20 +1,17 @@
-use crate::{CornerMap, EdgeMap, FaceMove, TileMap,MapError};
+use crate::{CornerMap, EdgeMap, FaceMove, MapError, TileMap};
 
 use std::ops::{Mul, MulAssign};
 /// 3x3 Puzzle Cube, with centers fixed in space.
 #[derive(Default, Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct FixedCentersCube {
     pub(crate) corners: CornerMap, //We use setters/getters to be consistent with cube
-    pub(crate) edges: EdgeMap,  
+    pub(crate) edges: EdgeMap,
 }
 /// # Components
 impl FixedCentersCube {
     #[inline]
     pub fn new(corners: CornerMap, edges: EdgeMap) -> FixedCentersCube {
-        FixedCentersCube{
-            corners,
-            edges
-        }
+        FixedCentersCube { corners, edges }
     }
     #[inline]
     pub fn corners(&self) -> CornerMap {
@@ -29,18 +26,17 @@ impl FixedCentersCube {
         self.edges
     }
     #[inline]
-    pub fn set_edges(&mut self, edges: EdgeMap)  {
+    pub fn set_edges(&mut self, edges: EdgeMap) {
         self.edges = edges;
     }
-
 }
 impl FixedCentersCube {
-    pub fn has_solution(self) -> bool  {
-        self.edges.permutation_parity() == self.corners.permutation_parity() &&
-            self.edges.orientation_residue().is_identity()&&
-            self.corners.orientation_residue().is_identity()
+    pub fn has_solution(self) -> bool {
+        self.edges.permutation_parity() == self.corners.permutation_parity()
+            && self.edges.orientation_residue().is_identity()
+            && self.corners.orientation_residue().is_identity()
     }
-    pub fn validate(self) -> Result<(),MapError>  {
+    pub fn validate(self) -> Result<(), MapError> {
         self.corners.validate().and_then(|_| self.edges.validate())
     }
     #[inline]

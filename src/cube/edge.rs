@@ -51,8 +51,8 @@ pub enum Edge {
     BD,
 }
 impl Edge {
-    pub fn edges() -> impl Iterator<Item=Edge> {
-        unsafe{(0u8..12).map(|e| std::mem::transmute(e))}
+    pub fn edges() -> impl Iterator<Item = Edge> {
+        unsafe { (0u8..12).map(|e| std::mem::transmute(e)) }
     }
     pub fn faces(self) -> (Face, Face) {
         use Edge::*;
@@ -203,15 +203,15 @@ impl Default for EdgeMap {
 }
 use std::mem::transmute;
 
-#[derive(Copy,Clone,PartialEq,Eq,Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 #[repr(transparent)]
 pub struct EOIndex(pub u32);
 
 impl EOIndex {
-    pub const SIZE: u32 = 2048; // 2^11 
+    pub const SIZE: u32 = 2048; // 2^11
 }
 
-#[derive(Copy,Clone,PartialEq,Eq,Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 #[repr(transparent)]
 pub struct EPIndex(pub u32);
 
@@ -251,11 +251,9 @@ impl EdgeMap {
         } else {
             None
         }
-        
     }
 
-
-    pub(crate) fn validate(self) -> Result<(),MapError> {
+    pub(crate) fn validate(self) -> Result<(), MapError> {
         let get = |edge| {
             let s = self.raw >> (5 * (edge as u32));
             ((s & 0b1111), ((s >> 4) & 0b1))
@@ -265,19 +263,18 @@ impl EdgeMap {
         for edge in Edge::edges() {
             let (pos, flip) = get(edge);
             if pos > 11 {
-                return Err(MapError::OutOfBounds)
+                return Err(MapError::OutOfBounds);
             }
             edge_mask |= 1 << (edge as u32);
             flip_sum ^= flip as u32;
         }
         if edge_mask != 0b1111_1111_1111 {
-           Err(MapError::Duplicate) 
+            Err(MapError::Duplicate)
         } else if flip_sum != 0 {
-           Err(MapError::Orientation) 
+            Err(MapError::Orientation)
         } else {
             Ok(())
         }
-            
     }
 
     pub fn inverse(self) -> EdgeMap {
@@ -312,7 +309,6 @@ impl EdgeMap {
     pub fn is_solved(self) -> bool {
         self == EdgeMap::default()
     }
-
 }
 
 /// # Indices
@@ -320,7 +316,7 @@ impl EdgeMap {
     pub fn orientation_index(self) -> EOIndex {
         let mut b = 0;
         for i in 0..11 {
-            b|=((self.raw >> ((i*5 + 4))) &0b1)<<i;
+            b |= ((self.raw >> (i * 5 + 4)) & 0b1) << i;
         }
         EOIndex(b as u32)
     }
@@ -328,9 +324,9 @@ impl EdgeMap {
     pub fn permutation_index(self) -> EPIndex {
         let mut idx = 0;
         let mut val = 0xFEDCBA9876543210u64;
-        for (edge,(pos,_)) in self.iter().take(11) {
+        for (edge, (pos, _)) in self.iter().take(11) {
             let v = (pos as u8) << 2;
-            idx = (12 - edge as u32)*idx + ((val >> v) & 0xf) as u32;
+            idx = (12 - edge as u32) * idx + ((val >> v) & 0xf) as u32;
             val -= 0x1111111111111110 << v;
         }
         EPIndex(idx as u32)
@@ -340,9 +336,9 @@ impl EdgeMap {
         let mut b = 0;
         let e = index.0 as u64;
         for i in 0..11 {
-            b|=(e&(0b1<<i))<<((i*5+4)-i);
+            b |= (e & (0b1 << i)) << ((i * 5 + 4) - i);
         }
-        b|= ((index.0.count_ones() as u64)&1) << (5*11+4);
+        b |= ((index.0.count_ones() as u64) & 1) << (5 * 11 + 4);
         self.raw &= !E4;
         self.raw |= b;
     }
@@ -366,12 +362,11 @@ impl EdgeMap {
         res |= ((val & 0xf) as u64) << (5 * 11);
         self.raw &= E4;
         self.raw |= res;
-
     }
 
     pub fn orientation_residue(self) -> Flip {
         //TODO optimized
-        let mut flip_parity = 0;  
+        let mut flip_parity = 0;
         for (_, (_, flip)) in self.iter() {
             flip_parity ^= flip as u32;
         }
@@ -384,8 +379,9 @@ impl EdgeMap {
 
     pub fn permutation_parity(self) -> bool {
         let mut transc = false;
-        { // WALK edge permutation in discrete cycle form
-            let mut rem =  0b1111_1111_1110u32;
+        {
+            // WALK edge permutation in discrete cycle form
+            let mut rem = 0b1111_1111_1110u32;
             let mut at = Edge::LU;
             // print!("({:?}", at);
             while rem != 0 {
@@ -397,7 +393,7 @@ impl EdgeMap {
                     // print!(" {:?}", at);
                     continue;
                 }
-                at = unsafe{std::mem::transmute(rem.trailing_zeros() as u8)};
+                at = unsafe { std::mem::transmute(rem.trailing_zeros() as u8) };
                 rem ^= 1u32 << (at as u8);
                 // print!(")({:?}", at);
             }
@@ -411,12 +407,12 @@ impl EdgeMap {
 /// todo document
 impl EdgeMap {
     pub fn from_raw(raw: u64) -> Result<EdgeMap, MapError> {
-        let cm = EdgeMap{raw};
+        let cm = EdgeMap { raw };
         cm.validate().map(|_| cm)
     }
-    
+
     pub unsafe fn from_raw_unchecked(raw: u64) -> EdgeMap {
-        EdgeMap{raw}
+        EdgeMap { raw }
     }
 
     pub fn raw(self) -> u64 {
@@ -442,7 +438,7 @@ mod tests {
             let index = EOIndex(rng.rand_u32() % EOIndex::SIZE);
             cube.set_orientation_index(index);
             assert_eq!(index, cube.orientation_index());
-            assert_eq!(cube.validate(),Ok(()));
+            assert_eq!(cube.validate(), Ok(()));
         }
     }
     #[test]
@@ -457,7 +453,7 @@ mod tests {
             let index = EPIndex(rng.rand_u32() % EPIndex::SIZE);
             cube.set_permutation_index(index);
             assert_eq!(index, cube.permutation_index());
-            assert_eq!(cube.validate(),Ok(()));
+            assert_eq!(cube.validate(), Ok(()));
         }
     }
 }
