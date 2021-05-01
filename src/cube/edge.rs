@@ -5,7 +5,7 @@ use crate::MapError;
 const E0: u64 = 0b00001_00001_00001_00001_00001_00001_00001_00001_00001_00001_00001_00001;
 const E4: u64 = E0 << 4;
 
-/// Single edge orientation group. An edge is `Flipped` iff it cannot be solved using only <Rcw,Ucw,Lcw,Dcw,F2,B2> turns.
+/// Single edge orientation group. An edge is `Flipped` iff it cannot be solved using only <R1,U1,L1,D1,F2,B2> turns.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u8)]
 pub enum Flip {
@@ -74,28 +74,29 @@ impl Edge {
     }
 }
 impl From<FaceMove> for EdgeMap {
+    #[inline]
     fn from(turn: FaceMove) -> EdgeMap {
         use FaceMove::*;
         EdgeMap {
             raw: match turn {
-                Ucw => 0x058122398A41A828,
+                U1 => 0x058122398A41A828,
                 U2 => 0x05A12A398A418022,
-                Uccw => 0x058920398A41A02A,
-                Dcw => 0x00A868398A458920,
+                U3 => 0x058920398A41A02A,
+                D1 => 0x00A868398A458920,
                 D2 => 0x04A968398A408860,
-                Dccw => 0x01A828398A448960,
-                Fcw => 0x05DAA83E74418820,
+                D3 => 0x01A828398A448960,
+                F1 => 0x05DAA83E74418820,
                 F2 => 0x05A548394C418820,
-                Fccw => 0x05D6C83EB2418820,
-                Bcw => 0x0BA934C18BB18820,
+                F3 => 0x05D6C83EB2418820,
+                B1 => 0x0BA934C18BB18820,
                 B2 => 0x04292B218A718820,
-                Bccw => 0x0A2937D98B818820,
-                Rcw => 0x05A928188A431C20,
+                B3 => 0x0A2937D98B818820,
+                R1 => 0x05A928188A431C20,
                 R2 => 0x05A92831CA410C20,
-                Rccw => 0x05A92810CA439820,
-                Lcw => 0x05A9283982018885,
+                R3 => 0x05A92810CA439820,
+                L1 => 0x05A9283982018885,
                 L2 => 0x05A9283988518801,
-                Lccw => 0x05A92839801188A4,
+                L3 => 0x05A92839801188A4,
             },
         }
     }
@@ -170,12 +171,12 @@ impl std::ops::MulAssign for EdgeMap {
 /// let mut edgemap = EdgeMap::default(); // solved edges
 /// assert_eq!(edgemap.get(Edge::FU), (Edge::FU, Flip::Identity));
 ///
-/// edgemap *= Move::Ucw;
+/// edgemap *= Move::U1;
 /// assert_eq!(edgemap.get(Edge::FU), (Edge::LU, Flip::Identity));
 ///
 /// {
 ///   use Move::*;
-///   let mut edges = edgemap * Rcw * Ucw * F2 * B2 * Dccw; // Scamble
+///   let mut edges = edgemap * R1 * U1 * F2 * B2 * D3; // Scamble
 ///   assert!(!edges.is_solved());
 ///   edges *= edges.inverse(); // Multiplying by the inverse results in the identity
 ///                            // map, the solved state.
@@ -297,7 +298,7 @@ impl EdgeMap {
     /// # Example
     /// ```
     /// use speedcube::Move::*;
-    /// let (a, b) = (Rcw.edges(), Fcw.edges());
+    /// let (a, b) = (R1.edges(), F1.edges());
     /// assert_eq!(a.inverse()*b, a.inverse_multiply(b));
     /// ```
     pub fn inverse_multiply(self, other: EdgeMap) -> EdgeMap {

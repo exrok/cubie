@@ -13,7 +13,7 @@ pub use self::fixed_centers_cube::FixedCentersCube;
 /// Stores both the centers and corners in a single u64. Used in
 /// cube to optimize for size.
 #[derive(Clone, Copy, Eq, PartialEq, Hash)]
-struct CenteredCornerMap {
+pub struct CenteredCornerMap {
     pub raw: u64,
 }
 
@@ -38,8 +38,8 @@ impl CenteredCornerMap {
 /// 3x3 Puzzle Cube
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Cube {
-    centered_corners: CenteredCornerMap,
-    edges: EdgeMap,
+    pub centered_corners: CenteredCornerMap,
+    pub edges: EdgeMap,
 }
 
 impl Default for Cube {
@@ -257,59 +257,40 @@ mod tests {
             );
             CubeGroup { cw, two, ccw }
         }
-        let u_cw = Move::Ucw.cube(); //generating set
-        let y_cw = Move::Ycw.cube();
-        let x_cw = Move::Xcw.cube();
+        let u_cw = Move::U1.cube(); //generating set
+        let y_cw = Move::Y1.cube();
+        let x_cw = Move::X1.cube();
 
-        let u = extend_cw(Move::Ucw, u_cw);
-        let y = extend_cw(Move::Ycw, y_cw);
-        let x = extend_cw(Move::Xcw, x_cw);
+        let u = extend_cw(Move::U1, u_cw);
+        let y = extend_cw(Move::Y1, y_cw);
+        let x = extend_cw(Move::X1, x_cw);
 
-        let z = extend_cw(Move::Zcw, y.cw * x.ccw * y.ccw);
-        let r = extend_cw(Move::Rcw, z.ccw * u.cw * z.cw);
+        let z = extend_cw(Move::Z1, y.cw * x.ccw * y.ccw);
+        let r = extend_cw(Move::R1, z.ccw * u.cw * z.cw);
 
-        let l = extend_cw(Move::Lcw, y.two * r.cw * y.two);
-        let b = extend_cw(Move::Bcw, y.cw * r.cw * y.ccw);
-        let f = extend_cw(Move::Fcw, y.ccw * r.cw * y.cw);
+        let l = extend_cw(Move::L1, y.two * r.cw * y.two);
+        let b = extend_cw(Move::B1, y.cw * r.cw * y.ccw);
+        let f = extend_cw(Move::F1, y.ccw * r.cw * y.cw);
 
         // and for fun and testing...
-        let d_ccw = r.two
-            * l.two
-            * u.cw
-            * f.two
-            * b.two
-            * u.cw
-            * f.two
-            * r.two
-            * f.two
-            * b.two
-            * u.two
-            * l.two
-            * u.two
-            * l.two
-            * r.two
-            * u.two
-            * r.two
-            * u.two
-            * r.two
-            * f.two
-            * u.ccw
-            * r.two
-            * b.two
-            * r.two
-            * l.two
-            * f.two
-            * l.two
-            * u.cw
-            * b.two
-            * f.two
-            * u.cw;
-        let d = extend_cw(Move::Dcw, d_ccw * d_ccw * d_ccw);
+        let d_ccw = r.two * l.two * u.cw * f.two * b.two * u.cw * f.two * r.two * f.two * b.two
+            * u.two * l.two * u.two * l.two * r.two * u.two * r.two * u.two * r.two * f.two * u.ccw
+            * r.two * b.two * r.two * l.two * f.two * l.two * u.cw * b.two * f.two * u.cw;
 
-        let e = extend_cw(Move::Ecw, y.ccw * u.cw * d.ccw);
-        let s = extend_cw(Move::Scw, z.cw * f.ccw * b.cw);
-        let m = extend_cw(Move::Mcw, x.ccw * r.cw * l.ccw);
+        let d = extend_cw(Move::D1, d_ccw * d_ccw * d_ccw);
 
+        let e = extend_cw(Move::E1, y.ccw * u.cw * d.ccw);
+        let s = extend_cw(Move::S1, z.cw * f.ccw * b.cw);
+        let m = extend_cw(Move::M1, x.ccw * r.cw * l.ccw);
+
+        extend_cw(Move::Uw1, d.cw*y.cw);
+        extend_cw(Move::Dw1, u.cw*y.ccw);
+
+        extend_cw(Move::Fw1, b.cw*z.cw);
+        extend_cw(Move::Bw1, f.cw*z.ccw);
+
+        extend_cw(Move::Rw1, l.cw*x.cw);
+        extend_cw(Move::Lw1, r.cw*x.ccw);
         // ensure equality is actually working.
         assert_ne!(e.cw, u.ccw);
         assert_ne!(s.cw, s.ccw);
@@ -329,7 +310,6 @@ mod tests {
         let mut corners = CornerMap::default();
         let mut edges = EdgeMap::default();
         let mut centers = CenterMap::default();
-        // TODO check inverser_multiply and congute
         for _ in 0..400 {
             let mv = random_move();
             cube *= mv;

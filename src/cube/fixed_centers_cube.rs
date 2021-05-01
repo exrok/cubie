@@ -1,4 +1,4 @@
-use crate::{CornerMap, EdgeMap, FaceMove, MapError, TileMap};
+use crate::{CornerMap, EdgeMap, FaceMove, MapError};
 
 use std::ops::{Mul, MulAssign};
 /// 3x3 Puzzle Cube, with centers fixed in space.
@@ -29,6 +29,10 @@ impl FixedCentersCube {
     pub fn set_edges(&mut self, edges: EdgeMap) {
         self.edges = edges;
     }
+    pub const fn raw(self) -> (u64, u64) {
+        (self.corners.raw, self.edges.raw)
+    }
+
 }
 impl FixedCentersCube {
     pub fn has_solution(self) -> bool {
@@ -51,7 +55,9 @@ impl FixedCentersCube {
         self.corners.is_solved() && self.edges.is_solved()
     }
 }
+
 impl From<FaceMove> for FixedCentersCube {
+    #[inline]
     fn from(turn: FaceMove) -> FixedCentersCube {
         FixedCentersCube {
             corners: turn.into(),

@@ -74,16 +74,15 @@ pub trait CubeGroup:
 {
 }
 
-impl<
-        T: Eq
-            + Sized
-            + CubeGroupExt
-            + Mul<Self, Output = Self>
-            + MulAssign<Self>
-            + Mul<Move, Output = Self>
-            + MulAssign<Move>
-            + Mul<FaceMove, Output = Self>
-            + MulAssign<FaceMove>,
-    > CubeGroup for T
+impl<T: Eq
+     + Sized
+     + CubeGroupExt
+     + Mul<Self, Output = Self>
+     + MulAssign<Self>
+     + Mul<Move, Output = Self>
+     + MulAssign<Move>
+     + Mul<FaceMove, Output = Self>
+     + MulAssign<FaceMove>,
+     > CubeGroup for T
 {
 }

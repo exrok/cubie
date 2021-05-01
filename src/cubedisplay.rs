@@ -17,8 +17,8 @@ enum DisplayKind {
 ///
 /// ```rust
 /// use speedcube::{Move::*, TileMap, CubeDisplay};
-/// let cube = Rcw.cube();
-/// let cornermap = Ucw.corners();
+/// let cube = R1.cube();
+/// let cornermap = U1.corners();
 /// let checkerboard = U2.cube() * D2 * F2 * F2 * L2 * R2 * F2 * B2;
 ///
 /// println!("{}", CubeDisplay::vt(&cube.into()));

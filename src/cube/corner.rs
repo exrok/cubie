@@ -1,4 +1,4 @@
-use crate::{FaceMove, MapError, TileMap};
+use crate::{FaceMove, MapError};
 
 /// Represents a corner cubie on the 3x3 cube by position.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -49,7 +49,7 @@ impl std::convert::From<u8> for Corner {
 pub enum Twist {
     Identity,
     Cw,
-    Ccw,
+    C1,
 }
 
 impl Twist {
@@ -57,13 +57,13 @@ impl Twist {
         self == Twist::Identity
     }
     pub fn is_ccw(self) -> bool {
-        self == Twist::Ccw
+        self == Twist::C1
     }
     pub fn is_cw(self) -> bool {
         self == Twist::Cw
     }
     pub fn inverse(self) -> Twist {
-        (&[Twist::Identity, Twist::Ccw, Twist::Cw])[self as usize]
+        (&[Twist::Identity, Twist::C1, Twist::Cw])[self as usize]
     }
 }
 
@@ -380,58 +380,58 @@ impl std::convert::From<FaceMove> for CornerMap {
         let turns = &[
             CornerMap {
                 raw: 0x0702050603000104,
-            }, //Ucw
+            }, //U1
             CornerMap {
                 raw: 0x0700050203040106,
             }, //U2
             CornerMap {
                 raw: 0x0704050003060102,
-            }, //Uccw
+            }, //U3
             CornerMap {
                 raw: 0x0506010407020300,
-            }, //Dcw
+            }, //D1
             CornerMap {
                 raw: 0x0106030405020700,
             }, //D2
             CornerMap {
                 raw: 0x0306070401020500,
-            }, //Dccw
+            }, //D3
             CornerMap {
                 raw: 0x07060c1003021509,
-            }, //Fcw
+            }, //F1
             CornerMap {
                 raw: 0x0706000103020405,
             }, //F2
             CornerMap {
                 raw: 0x070609150302100c,
-            }, //Fccw
+            }, //F3
             CornerMap {
                 raw: 0x130f05040a160100,
-            }, //Bcw
+            }, //B1
             CornerMap {
                 raw: 0x0203050406070100,
             }, //B2
             CornerMap {
                 raw: 0x160a05040f130100,
-            }, //Bccw
+            }, //B3
             CornerMap {
                 raw: 0x07060504110b0812,
-            }, //Rcw
+            }, //R1
             CornerMap {
                 raw: 0x0706050400010203,
             }, //R2
             CornerMap {
                 raw: 0x0706050412080b11,
-            }, //Rccw
+            }, //R3
             CornerMap {
                 raw: 0x0e14170d03020100,
-            }, //Lcw
+            }, //L1
             CornerMap {
                 raw: 0x0405060703020100,
             }, //L2
             CornerMap {
                 raw: 0x0d17140e03020100,
-            }, //Lccw
+            }, //L3
         ];
         turns[turn as usize]
     }

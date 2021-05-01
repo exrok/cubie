@@ -15,20 +15,40 @@ pub enum TileMapConversionError {
     Center(MapError),
     Edge(MapError),
 }
-
+#[derive(Copy,Clone,Eq,PartialEq,Debug)]
+pub enum Tile {
+    U1,U2,U3,U4,U5,U6,U7,U8,U9,
+    D1,D2,D3,D4,D5,D6,D7,D8,D9,
+    F1,F2,F3,F4,F5,F6,F7,F8,F9,
+    B1,B2,B3,B4,B5,B6,B7,B8,B9,
+    R1,R2,R3,R4,R5,R6,R7,R8,R9,
+    L1,L2,L3,L4,L5,L6,L7,L8,L9,
+}
 use TileMapConversionError as TMErr;
+use std::ops::{ Index,IndexMut };
+impl Index<Tile> for TileMap {
+    type Output = Option<Face>;
 
-#[derive(Default, Clone, PartialEq, Eq, Debug)]
-pub struct TileMap {
-    pub map: [[Option<Face>; 9]; 6],
+    fn index(&self, index: Tile) -> &Self::Output {
+        &self.as_array()[index as usize]
+    }
 }
 
+impl IndexMut<Tile> for TileMap {
+    fn index_mut(&mut self, index: Tile) -> &mut Self::Output {
+        &mut self.as_array_mut()[index as usize]
+    }
+}
+#[derive(Default, Clone, PartialEq, Eq, Debug)]
+pub struct TileMap {
+    pub(crate) map: [[Option<Face>; 9]; 6],
+}
 impl From<Cube> for TileMap {
     fn from(cube: Cube) -> TileMap {
         let mut tilemap: TileMap = Default::default();
         tilemap.store_centers(cube.centers());
-        tilemap.store_edges(cube.edges());
-        tilemap.store_corners(cube.corners());
+        tilemap.store_edges(cube.edges(),0);
+        tilemap.store_corners(cube.corners(),0);
         tilemap
     }
 }
@@ -36,8 +56,8 @@ impl From<FixedCentersCube> for TileMap {
     fn from(cube: FixedCentersCube) -> TileMap {
         let mut tilemap: TileMap = Default::default();
         tilemap.store_identity_centers();
-        tilemap.store_edges(cube.edges);
-        tilemap.store_corners(cube.corners);
+        tilemap.store_edges(cube.edges,0);
+        tilemap.store_corners(cube.corners,0);
         tilemap
     }
 }
@@ -53,7 +73,7 @@ impl From<CornerMap> for TileMap {
     fn from(corners: CornerMap) -> TileMap {
         let mut tilemap: TileMap = Default::default();
         tilemap.store_identity_centers();
-        tilemap.store_corners(corners);
+        tilemap.store_corners(corners,0);
         tilemap
     }
 }
@@ -62,7 +82,7 @@ impl From<EdgeMap> for TileMap {
     fn from(edges: EdgeMap) -> TileMap {
         let mut tilemap: TileMap = Default::default();
         tilemap.store_identity_centers();
-        tilemap.store_edges(edges);
+        tilemap.store_edges(edges,0);
         tilemap
     }
 }
@@ -148,12 +168,16 @@ pub fn tiles_from_corner(corner: Corner) -> [usize; 3] {
         Corner::DRB => [44, 17, 33],
     }
 }
+struct SrcTileMask {
 
+}
 use crate::cube::corner::Twist;
 impl TileMap {
+#[doc(hidden)]
     pub fn as_array(&self) -> &[Option<Face>; 54] {
         unsafe { std::mem::transmute(&self.map) }
     }
+#[doc(hidden)]
     pub fn as_array_mut(&mut self) -> &mut [Option<Face>; 54] {
         unsafe { std::mem::transmute(&mut self.map) }
     }
@@ -218,7 +242,7 @@ impl TileMap {
             let corner =
                 ((f1 & 1) << (f1 >> 1)) | ((f2 & 1) << (f2 >> 1)) | ((f3 & 1) << (f3 >> 1));
             let (mut twist, y_axis) = if (f1 & 0b110) == 0 {
-                (Twist::Ccw, f3)
+                (Twist::C1, f3)
             } else if (f2 & 0b110) == 0 {
                 (Twist::Identity, f1)
             } else if (f3 & 0b110) == 0 {
@@ -244,7 +268,7 @@ impl TileMap {
             if let Some(unset_acc) = unset_acc {
                 let c: Corner = unsafe { std::mem::transmute(corner_acc as u8) };
                 let map = tiles_from_corner(unset_acc);
-                let a = (unset_acc as u32);
+                let a = unset_acc as u32;
                 if (a ^ (a >> 1) ^ (a >> 2)) & 0b1 == 1 {
                     eprintln!("inversed");
                     twist_acc = twist_acc.inverse();
@@ -253,7 +277,7 @@ impl TileMap {
                 let new = match twist_acc.inverse() {
                     Twist::Identity => [c.x(), c.y(), c.z()],
                     Twist::Cw => [c.z(), c.x(), c.y()],
-                    Twist::Ccw => [c.y(), c.z(), c.x()],
+                    Twist::C1 => [c.y(), c.z(), c.x()],
                 };
                 if map
                     .iter()
@@ -377,7 +401,7 @@ impl TileMap {
             let corner =
                 ((f1 & 1) << (f1 >> 1)) | ((f2 & 1) << (f2 >> 1)) | ((f3 & 1) << (f3 >> 1));
             let (mut twist, y_axis) = if (f1 & 0b110) == 0 {
-                (Twist::Ccw, f3)
+                (Twist::C1, f3)
             } else if (f2 & 0b110) == 0 {
                 (Twist::Identity, f1)
             } else if (f3 & 0b110) == 0 {
@@ -399,74 +423,56 @@ impl TileMap {
         }
         CornerMap::from_raw(raw).map_err(|err| TMErr::Corner(err))
     }
-    /// Render a 3d picture of the cube using VT escape codes on a compatible 256-color terminal.
-    ///
-    /// By default, `Front` is <span style="border-bottom:2px solid  #ff0000;">red</span> ,
-    /// `Back` is <span style="border-bottom:2px solid  #ffaf00;">orange</span>,
-    /// `Up` is <span style="border-bottom:2px solid  #ffff00;">yellow</span>,
-    /// `Down` is <span style="border-bottom:2px solid  #e4e4e4;">white</span>,
-    /// `Right` is <span style="border-bottom:2px solid  #5fd700;">green</span> and
-    /// `Left` is <span style="border-bottom:2px solid  #0087ff;">blue</span>.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use speedcube::{Move, TileMap};
-    /// let cube = Move::Rcw.cube();
-    /// let cornermap = Move::Ucw.corners();
-    /// println!("{}", TileMap::from(cube).terminal_display());
-    /// println!("{}", TileMap::from(cornermap).terminal_display());
-    /// ```
-    ///
-    /// Will output:    
-    /// <div>
-    /// <img  style="width:100%; max-width:207px;image-rendering: pixelated;
-    ///    image-rendering: -moz-crisp-edges;image-rendering: crisp-edges;"
-    ///   src="data:image/png;base64,
-    /// iVBORw0KGgoAAAANSUhEUgAAAEUAAABrBAMAAADTBVJcAAAAG1BMVEVBAAAICAgAh////wD/rwD/
-    /// AABf1wDk5OR2dnabo1jqAAAAAXRSTlMAQObYZgAAAtVJREFUeAHN1bGR2zAQhWG6AzyalJGeWrgW
-    /// 0MAFaIEtKL4MZXv/WQyFwRHCWJE3gGzpGzw+XrALw/wKi4+az2YgazX6rD9u+kHuGMgnCJPUEwyE
-    /// kRtQQ9wQBAFhNrW3uAFU5ibpScx8hBrECRImqRLMxxrOIM6sTZjfOoO03htgJGclYYj1IEgTlJkt
-    /// CfMZFg9a73sbBNKWNp1GxO25DTJ2mElyQxAm5ybICCYlYQgizszeBN2Oo/Yyo9oLk59BZrbaKzx7
-    /// YfIZhLnohfnjQZjrXpgHQZhRL8zDg8a9MB501St4r2rEVaHrZdZ7YQjCLG0vI0vtJTO1l32p0/C/
-    /// 5ezlQXbyrdwQhOl7YQxhCGL6XhiGXgQxXa/TAOq/ul6NOQWo77VcTNdruZy21zUBYcZBFVUzJiAM
-    /// t7xGBE1Gtzl56DGNYjS5BfIKASqbBPk5CeJMmgQZSUmToMSEl/ck0CCsCYJcTRs0LD8J8pkE+UyC
-    /// KpoSEGQ2kHfmH/by3u/lVT9I7vfyeldPMBBGbkBPEqtRAdnpJqohBQMphjjlpuhJzHwFIwwnSBgQ
-    /// ZMd8xeA3nGcUhnY8LjzWJ2lPYXjwPZv5hjDtGYsw94CJ32sstx/3xLLpNFrvZo7ueZKZpGq+7BNz
-    /// tL2UEiYJY40w32Zicw8/Y6LMKJKpFVPO5+HnTZiisNCPdSlMgYAKJglT3HxYXBTG20WMNgs6jYiL
-    /// fHi7hCGO7zC8QOKwmMMDiPNPDC+QuFJ2YTaM+NnvMyO/ImCyqtFBhjDJ97LFmcVkYRIdyfB+bows
-    /// uzBRZnTDsCCF6fdyLNpUMHUvY7q97E3avYxp9nIUJmKavZzavUxQNSqjvexBfo72sr9Gv220lzFZ
-    /// /gKHe7m+RgzkGmFuGMgIVQMZI8x0L+f/ai8XkJ2vSDHEqTFhOIfIbzjP4YIrzTlq1J7hjXsmzzPp
-    /// NX0/8/f8/t8LNCWgt/byX1Vp2biqclFaAAAAAElFTkSuQmCC">
-    /// </div>
+
+#[doc(hidden)]
     pub fn store_identity_centers(&mut self) {
         for face in Face::faces() {
             self.map[face as usize][4] = Some(face);
         }
     }
+#[doc(hidden)]
     pub fn store_centers(&mut self, centers: CenterMap) {
         for face in Face::faces() {
             self.map[centers.get(face) as usize][4] = Some(face);
         }
     }
-    pub fn store_edges(&mut self, edges: EdgeMap) {
+#[doc(hidden)]
+    pub fn store_edges(&mut self, edges: EdgeMap, tile_mask:u64) {
         let fm: &mut [Option<Face>; 54] = unsafe { std::mem::transmute(&mut self.map) };
+        let mut tmask = (tile_mask & 0xf0f0_f0f0) | ((tile_mask >> 36) & 0x0f0f_0f0f);
         for (edge, (pos, flipped)) in edges.iter() {
-            let (mut a, mut b) = edge.faces();
+            let (af, bf) = edge.faces();
+            let mut a = if tmask & 1 == 0 {Some(af)} else {None};
+            tmask >>= 1;
+            let mut b = if tmask & 1 == 0 {Some(bf)} else {None};
+            tmask >>= 1;
             let position_parity = ((edge as u8 ^ pos as u8) >> 2) & 1;
             if position_parity != (flipped as u8) {
                 std::mem::swap(&mut a, &mut b);
             }
             let (a_index, b_index) = tiles_from_edge(pos);
-            fm[a_index as usize] = Some(a);
-            fm[b_index as usize] = Some(b);
+            fm[a_index as usize] = a;
+            fm[b_index as usize] = b;
         }
     }
+#[doc(hidden)]
+    pub fn store_corners(&mut self, cm: CornerMap, tile_mask:u64) {
+        let mut xm = 0x05050505_04040404;
+        let mut zm = 0x03030202_03030202;
+        let mut ym = 0x01000100_01000100;
+        {
+            let xm_sel = 0x01010101_01010101u64;
+            xm |= (tile_mask & xm_sel) * 7;
+            ym |= ((tile_mask>>1) & xm_sel) * 7;
+            zm |= ((tile_mask>>2) & xm_sel) * 7;
+        }
+        // for i in 0..8 {
+        //     tk
+        // }
 
-    pub fn store_corners(&mut self, cm: CornerMap) {
-        let mut xm = 0x5050505_04040404;
-        let mut zm = 0x3030202_03030202;
-        let ym = 0x01000100_01000100;
+        // let mut xm = 0x5050505_04040404;
+        // let mut zm = 0x3030202_03030202;
+        // let ym = 0x01000100_01000100;
         let pm = 0x08000008_00080800;
         const MASK: u64 = 0x08080808_08080808;
 
@@ -489,7 +495,14 @@ impl TileMap {
         let ymj = nil & ym | ccw & xm | cw & zm;
         let zmj = nil & zm | ccw & ym | cw & xm;
         let fm: &mut [Option<Face>; 54] = unsafe { std::mem::transmute(&mut self.map) };
-
+        let fnx = |a| -> Option<Face> {
+            let k = a as u8;
+            if k > 5 {
+                None
+            } else {
+                Some(unsafe { std::mem::transmute(k) })
+            }
+        };
         for _i in 0..8 {
             let i = _i * 8;
             use Corner::*;
@@ -503,9 +516,9 @@ impl TileMap {
                 DRF => (42, 11, 26),
                 DRB => (44, 17, 33),
             };
-            fm[xp] = Some(unsafe { std::mem::transmute((xmj >> i) as u8) });
-            fm[yp] = Some(unsafe { std::mem::transmute((ymj >> i) as u8) });
-            fm[zp] = Some(unsafe { std::mem::transmute((zmj >> i) as u8) });
+            fm[xp] =fnx(xmj >> i);
+            fm[yp] =fnx(ymj >> i);
+            fm[zp] =fnx(zmj >> i);
         }
     }
 }
@@ -527,20 +540,20 @@ mod tests {
         let tilemap: TileMap = (CornerMap::default() * Move::F2).into();
         assert_eq!(tilemap.corners(), Ok(CornerMap::default() * Move::F2));
 
-        let tilemap: TileMap = (CornerMap::default() * Move::Fcw).into();
-        assert_eq!(tilemap.corners(), Ok(CornerMap::default() * Move::Fcw));
+        let tilemap: TileMap = (CornerMap::default() * Move::F1).into();
+        assert_eq!(tilemap.corners(), Ok(CornerMap::default() * Move::F1));
 
-        let cube = Move::Fcw.corners() * Move::Lcw * Move::Bcw * Move::U2 * Move::Dccw;
+        let cube = Move::F1.corners() * Move::L1 * Move::B1 * Move::U2 * Move::D3;
         let tilemap: TileMap = (cube).into();
         assert_eq!(tilemap.corners(), Ok(cube));
     }
     #[test]
     fn edge_extraction() {
         use crate::Move;
-        let tilemap: TileMap = (EdgeMap::default() * Move::Rcw * Move::Lcw).into();
+        let tilemap: TileMap = (EdgeMap::default() * Move::R1 * Move::L1).into();
         assert_eq!(
             tilemap.edges(),
-            Ok(EdgeMap::default() * Move::Rcw * Move::Lcw)
+            Ok(EdgeMap::default() * Move::R1 * Move::L1)
         )
     }
     #[test]
