@@ -15,6 +15,7 @@ pub enum TileMapConversionError {
     Center(MapError),
     Edge(MapError),
 }
+
 #[derive(Copy,Clone,Eq,PartialEq,Debug)]
 pub enum Tile {
     U1,U2,U3,U4,U5,U6,U7,U8,U9,
@@ -24,6 +25,7 @@ pub enum Tile {
     R1,R2,R3,R4,R5,R6,R7,R8,R9,
     L1,L2,L3,L4,L5,L6,L7,L8,L9,
 }
+
 use TileMapConversionError as TMErr;
 use std::ops::{ Index,IndexMut };
 impl Index<Tile> for TileMap {
@@ -92,14 +94,6 @@ fn edge_from_faces(a: Face, b: Face) -> Option<(Edge, Flip)> {
     use Edge::*;
     use Flip::*;
 
-    // for edge in Edge::edges() {
-    //     let (a,b) = edge.faces();
-    //     let ai = a as usize;
-    //     let bi = b as usize;
-    //     bff[ai*6+bi] = Some((edge, Flip::Identity));
-    //     bff[bi*6+ai] = Some((edge, Flip::Flipped));
-    //     // eprintln!("{:?} edge", edge.faces())
-    // }
     let map = [
         None,
         None,
@@ -168,9 +162,11 @@ pub fn tiles_from_corner(corner: Corner) -> [usize; 3] {
         Corner::DRB => [44, 17, 33],
     }
 }
+
 struct SrcTileMask {
 
 }
+
 use crate::cube::corner::Twist;
 impl TileMap {
 #[doc(hidden)]
@@ -242,7 +238,7 @@ impl TileMap {
             let corner =
                 ((f1 & 1) << (f1 >> 1)) | ((f2 & 1) << (f2 >> 1)) | ((f3 & 1) << (f3 >> 1));
             let (mut twist, y_axis) = if (f1 & 0b110) == 0 {
-                (Twist::C1, f3)
+                (Twist::Ccw, f3)
             } else if (f2 & 0b110) == 0 {
                 (Twist::Identity, f1)
             } else if (f3 & 0b110) == 0 {
@@ -277,7 +273,7 @@ impl TileMap {
                 let new = match twist_acc.inverse() {
                     Twist::Identity => [c.x(), c.y(), c.z()],
                     Twist::Cw => [c.z(), c.x(), c.y()],
-                    Twist::C1 => [c.y(), c.z(), c.x()],
+                    Twist::Ccw => [c.y(), c.z(), c.x()],
                 };
                 if map
                     .iter()
@@ -401,7 +397,7 @@ impl TileMap {
             let corner =
                 ((f1 & 1) << (f1 >> 1)) | ((f2 & 1) << (f2 >> 1)) | ((f3 & 1) << (f3 >> 1));
             let (mut twist, y_axis) = if (f1 & 0b110) == 0 {
-                (Twist::C1, f3)
+                (Twist::Ccw, f3)
             } else if (f2 & 0b110) == 0 {
                 (Twist::Identity, f1)
             } else if (f3 & 0b110) == 0 {

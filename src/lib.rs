@@ -4,7 +4,6 @@
 //#![doc(html_logo_url = "path_to_logo", html_favicon_url = "path_to_favicon")]
 pub mod cube;
 mod cubedisplay;
-pub mod group;
 pub mod moves;
 pub mod tile;
 

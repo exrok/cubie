@@ -4,7 +4,7 @@ enum DisplayKind {
     SVG,
 }
 
-/// Render a 3d picture of the cube using VT escape codes on a compatible 256-color terminal.
+/// Cube Render Implementing std::display
 ///
 /// By default, `Front` is <span style="border-bottom:2px solid  #ff0000;">red</span> ,
 /// `Back` is <span style="border-bottom:2px solid  #ffaf00;">orange</span>,

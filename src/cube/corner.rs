@@ -49,7 +49,7 @@ impl std::convert::From<u8> for Corner {
 pub enum Twist {
     Identity,
     Cw,
-    C1,
+    Ccw,
 }
 
 impl Twist {
@@ -57,13 +57,13 @@ impl Twist {
         self == Twist::Identity
     }
     pub fn is_ccw(self) -> bool {
-        self == Twist::C1
+        self == Twist::Ccw
     }
     pub fn is_cw(self) -> bool {
         self == Twist::Cw
     }
     pub fn inverse(self) -> Twist {
-        (&[Twist::Identity, Twist::C1, Twist::Cw])[self as usize]
+        (&[Twist::Identity, Twist::Ccw, Twist::Cw])[self as usize]
     }
 }
 

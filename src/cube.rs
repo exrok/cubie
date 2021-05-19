@@ -68,7 +68,6 @@ impl Cube {
     pub fn centers(&self) -> CenterMap {
         self.centered_corners.centers()
     }
-
     pub fn set_corners(&mut self, corners: CornerMap) {
         self.centered_corners = CenteredCornerMap::new(self.centers(), corners);
     }
@@ -79,6 +78,7 @@ impl Cube {
         self.centered_corners = CenteredCornerMap::new(centers, self.corners());
     }
 }
+
 impl Cube {
     pub const fn raw(self) -> (u64, u64) {
         (self.centered_corners.raw, self.edges.raw)
