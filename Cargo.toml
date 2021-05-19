@@ -1,5 +1,5 @@
 [package]
-name = "speedcube"
+name = "cubie"
 version = "0.1.0"
 authors = ["Thomas Dagenais <exrok@i64.dev>"]
 edition = "2018"

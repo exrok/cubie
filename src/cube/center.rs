@@ -82,7 +82,7 @@ impl CenterMap {
     }
     pub fn permutation_parity(self) -> bool {
         // let mut parity_mask = 0u32;
-        // for (i, rot) in speedcube::moves::ROTATION_TABLE.iter().enumerate() {
+        // for (i, rot) in cubie::moves::ROTATION_TABLE.iter().enumerate() {
         //     eprintln!("{}=> {}",i, rot.corners().permutation_parity() ^rot.edges().permutation_parity() );
         //     let parity = rot.corners().permutation_parity() ^rot.edges().permutation_parity() ;
         //     parity_mask |= (parity as u32) << i;

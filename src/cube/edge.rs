@@ -165,8 +165,8 @@ impl std::ops::MulAssign for EdgeMap {
 ///
 /// # Example
 /// ```
-/// use speedcube::cube::edge::{ Edge, Flip, EdgeMap };
-/// use speedcube::Move;
+/// use cubie::cube::edge::{ Edge, Flip, EdgeMap };
+/// use cubie::Move;
 ///
 /// let mut edgemap = EdgeMap::default(); // solved edges
 /// assert_eq!(edgemap.get(Edge::FU), (Edge::FU, Flip::Identity));
@@ -297,7 +297,7 @@ impl EdgeMap {
     ///
     /// # Example
     /// ```
-    /// use speedcube::Move::*;
+    /// use cubie::Move::*;
     /// let (a, b) = (R1.edges(), F1.edges());
     /// assert_eq!(a.inverse()*b, a.inverse_multiply(b));
     /// ```

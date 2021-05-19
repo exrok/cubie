@@ -431,7 +431,7 @@ impl Move {
 /// # Examples
 ///
 /// ```
-/// use speedcube::{ moves::FaceMove, FixedCentersCube };
+/// use cubie::{ moves::FaceMove, FixedCentersCube };
 /// let mut cube = FixedCentersCube::default() * FaceMove::U1;
 /// assert_eq!(cube, FaceMove::U1.fc_cube());
 ///
