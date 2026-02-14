@@ -74,7 +74,6 @@ impl From<CenterMap> for TileMap {
 impl From<CornerMap> for TileMap {
     fn from(corners: CornerMap) -> TileMap {
         let mut tilemap: TileMap = Default::default();
-        tilemap.store_identity_centers();
         tilemap.store_corners(corners,0);
         tilemap
     }
@@ -83,16 +82,15 @@ impl From<CornerMap> for TileMap {
 impl From<EdgeMap> for TileMap {
     fn from(edges: EdgeMap) -> TileMap {
         let mut tilemap: TileMap = Default::default();
-        tilemap.store_identity_centers();
         tilemap.store_edges(edges,0);
         tilemap
     }
 }
 
-use crate::cube::edge::Flip;
-fn edge_from_faces(a: Face, b: Face) -> Option<(Edge, Flip)> {
+use crate::cube::edge::EdgeOrientation;
+fn edge_from_faces(a: Face, b: Face) -> Option<(Edge, EdgeOrientation)> {
     use Edge::*;
-    use Flip::*;
+    use EdgeOrientation::*;
 
     let map = [
         None,
@@ -167,7 +165,7 @@ struct SrcTileMask {
 
 }
 
-use crate::cube::corner::Twist;
+use crate::cube::corner::CornerOrientation;
 impl TileMap {
 #[doc(hidden)]
     pub fn as_array(&self) -> &[Option<Face>; 54] {
@@ -187,7 +185,7 @@ impl TileMap {
         let tiles = self.as_array_mut();
 
         let mut corner_acc = 0;
-        let mut twist_acc = Twist::Identity;
+        let mut twist_acc = CornerOrientation::Identity;
         let mut unset_acc = None;
         let mut set_cnt = 0;
         for pos in Corner::corners() {
@@ -238,11 +236,11 @@ impl TileMap {
             let corner =
                 ((f1 & 1) << (f1 >> 1)) | ((f2 & 1) << (f2 >> 1)) | ((f3 & 1) << (f3 >> 1));
             let (mut twist, y_axis) = if (f1 & 0b110) == 0 {
-                (Twist::Ccw, f3)
+                (CornerOrientation::Ccw, f3)
             } else if (f2 & 0b110) == 0 {
-                (Twist::Identity, f1)
+                (CornerOrientation::Identity, f1)
             } else if (f3 & 0b110) == 0 {
-                (Twist::Cw, f2)
+                (CornerOrientation::Cw, f2)
             } else {
                 continue;
             };
@@ -271,9 +269,9 @@ impl TileMap {
                 }
                 eprintln!("AUTOFILE: {:?}", twist_acc);
                 let new = match twist_acc.inverse() {
-                    Twist::Identity => [c.x(), c.y(), c.z()],
-                    Twist::Cw => [c.z(), c.x(), c.y()],
-                    Twist::Ccw => [c.y(), c.z(), c.x()],
+                    CornerOrientation::Identity => [c.x(), c.y(), c.z()],
+                    CornerOrientation::Cw => [c.z(), c.x(), c.y()],
+                    CornerOrientation::Ccw => [c.y(), c.z(), c.x()],
                 };
                 if map
                     .iter()
@@ -397,11 +395,11 @@ impl TileMap {
             let corner =
                 ((f1 & 1) << (f1 >> 1)) | ((f2 & 1) << (f2 >> 1)) | ((f3 & 1) << (f3 >> 1));
             let (mut twist, y_axis) = if (f1 & 0b110) == 0 {
-                (Twist::Ccw, f3)
+                (CornerOrientation::Ccw, f3)
             } else if (f2 & 0b110) == 0 {
-                (Twist::Identity, f1)
+                (CornerOrientation::Identity, f1)
             } else if (f3 & 0b110) == 0 {
-                (Twist::Cw, f2)
+                (CornerOrientation::Cw, f2)
             } else {
                 return Err(TMErr::InvalidPiece); // sanity
             };
@@ -462,13 +460,7 @@ impl TileMap {
             ym |= ((tile_mask>>1) & xm_sel) * 7;
             zm |= ((tile_mask>>2) & xm_sel) * 7;
         }
-        // for i in 0..8 {
-        //     tk
-        // }
 
-        // let mut xm = 0x5050505_04040404;
-        // let mut zm = 0x3030202_03030202;
-        // let ym = 0x01000100_01000100;
         let pm = 0x08000008_00080800;
         const MASK: u64 = 0x08080808_08080808;
 

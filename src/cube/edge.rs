@@ -8,16 +8,16 @@ const E4: u64 = E0 << 4;
 /// Single edge orientation group. An edge is `Flipped` iff it cannot be solved using only <R1,U1,L1,D1,F2,B2> turns.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u8)]
-pub enum Flip {
+pub enum EdgeOrientation {
     Identity = 0,
     Flipped = 1,
 }
-impl Flip {
+impl EdgeOrientation {
     pub fn is_flipped(self) -> bool {
-        self == Flip::Flipped
+        self == EdgeOrientation::Flipped
     }
     pub fn is_identity(self) -> bool {
-        self == Flip::Identity
+        self == EdgeOrientation::Identity
     }
 }
 
@@ -221,7 +221,7 @@ impl EPIndex {
 }
 
 impl EdgeMap {
-    pub fn get(self, edge: Edge) -> (Edge, Flip) {
+    pub fn get(self, edge: Edge) -> (Edge, EdgeOrientation) {
         let s = self.raw >> (5 * (edge as u32));
         unsafe {
             (
@@ -230,17 +230,17 @@ impl EdgeMap {
             )
         }
     }
-    pub fn iter(self) -> impl Iterator<Item = (Edge, (Edge, Flip))> + ExactSizeIterator {
+    pub fn iter(self) -> impl Iterator<Item = (Edge, (Edge, EdgeOrientation))> + ExactSizeIterator {
         let mut set = self.raw;
         (0..12).map(move |i| unsafe {
             let edge: Edge = transmute(i as u8);
             let position: Edge = transmute((set & 0b1111) as u8);
-            let ori: Flip = transmute(((set >> 4) & 0b1) as u8);
+            let ori: EdgeOrientation = transmute(((set >> 4) & 0b1) as u8);
             set >>= 5;
             (edge, (position, ori))
         })
     }
-    pub fn from_iter(iter: impl Iterator<Item = (Edge, (Edge, Flip))>) -> Option<EdgeMap> {
+    pub fn from_iter(iter: impl Iterator<Item = (Edge, (Edge, EdgeOrientation))>) -> Option<EdgeMap> {
         let mut res = EdgeMap::default().raw;
         for (edge, (pos, ori)) in iter {
             res &= !(0b11111u64 << ((edge as u64) * 5));
@@ -365,16 +365,16 @@ impl EdgeMap {
         self.raw |= res;
     }
 
-    pub fn orientation_residue(self) -> Flip {
+    pub fn orientation_residue(self) -> EdgeOrientation {
         //TODO optimized
         let mut flip_parity = 0;
         for (_, (_, flip)) in self.iter() {
             flip_parity ^= flip as u32;
         }
         if flip_parity == 0 {
-            Flip::Identity
+            EdgeOrientation::Identity
         } else {
-            Flip::Flipped
+            EdgeOrientation::Flipped
         }
     }
 

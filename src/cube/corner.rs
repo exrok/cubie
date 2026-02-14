@@ -46,35 +46,36 @@ impl std::convert::From<u8> for Corner {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
-pub enum Twist {
+pub enum CornerOrientation {
     Identity,
     Cw,
     Ccw,
 }
 
-impl Twist {
+use CornerOrientation as CO;
+impl CO {
     pub fn is_identity(self) -> bool {
-        self == Twist::Identity
+        self == CO::Identity
     }
     pub fn is_ccw(self) -> bool {
-        self == Twist::Ccw
+        self == CO::Ccw
     }
     pub fn is_cw(self) -> bool {
-        self == Twist::Cw
+        self == CO::Cw
     }
-    pub fn inverse(self) -> Twist {
-        (&[Twist::Identity, Twist::Ccw, Twist::Cw])[self as usize]
+    pub fn inverse(self) -> CO {
+        (&[CO::Identity, CO::Ccw, CO::Cw])[self as usize]
     }
 }
 
-impl Mul for Twist {
+impl Mul for CornerOrientation {
     type Output = Self;
     fn mul(self, rhs: Self) -> Self {
         unsafe { transmute((rhs as u8 + self as u8) % 3) }
     }
 }
 
-impl MulAssign for Twist {
+impl MulAssign for CornerOrientation {
     fn mul_assign(&mut self, rhs: Self) {
         *self = *self * rhs;
     }
@@ -118,22 +119,24 @@ impl CPIndex {
 }
 
 impl CornerMap {
-    pub fn get(&self, corner: Corner) -> (Corner, Twist) {
+    pub fn get(&self, corner: Corner) -> (Corner, CornerOrientation) {
         let m = (self.raw >> (8 * corner as u64)) as u8;
         unsafe { (Corner::from(m), transmute(m >> 3)) }
     }
-    pub fn iter(self) -> impl Iterator<Item = (Corner, (Corner, Twist))> + ExactSizeIterator {
+    pub fn iter(
+        self,
+    ) -> impl Iterator<Item = (Corner, (Corner, CornerOrientation))> + ExactSizeIterator {
         let mut set = self.raw;
         (0..8).map(move |i| unsafe {
             let corner: Corner = transmute(i as u8);
             let position: Corner = transmute((set & 0b0111) as u8);
-            let ori: Twist = transmute(((set >> 3) & 0b11) as u8);
+            let ori: CornerOrientation = transmute(((set >> 3) & 0b11) as u8);
             set >>= 8;
             (corner, (position, ori))
         })
     }
     pub fn from_iter(
-        iter: impl Iterator<Item = (Corner, (Corner, Twist))>,
+        iter: impl Iterator<Item = (Corner, (Corner, CornerOrientation))>,
     ) -> Result<CornerMap, MapError> {
         let mut res = 0x0706050403020100;
         for (corner, (pos, ori)) in iter {
@@ -186,7 +189,7 @@ impl CornerMap {
     //     })).unwrap()
     // }
 
-    pub(crate) fn orientation_residue(self) -> Twist {
+    pub(crate) fn orientation_residue(self) -> CornerOrientation {
         let res =
             (((self.raw & 0x1818_1818_1818_1818).wrapping_mul(0x01010101_01010101)) >> 57) as u8;
         unsafe { transmute((res) % 3) }

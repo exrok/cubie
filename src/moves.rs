@@ -1,5 +1,32 @@
+//! Move sets and methods to decompose, construct and transform moves.
+//!
+//! This module defines the moves used manipulate the cube maps. The
+//! main move set is define via the enum [Move] and contains the 48
+//! moves acknowledges by the speed cubing.
+//!
+//! Each move has three components which defines its effect on the cube:
+//!  - the set of cubies affected <small>(denoted by prefixed letter(s) U,D,Uw)</small>. 
+//!  - the axis of rotation <small>(denoted by prefixed letter(s) 'U,D,Uw')</small>. 
+//!  - the number of 90° clock-wise rotations about the axis <small>(denoted by 1,2,3 )</small>
+//!
+//! The standard convention for defining the clock-wise direction from the speed-cubing community is
+//! used you can find more information [here](https://ruwix.com/the-rubiks-cube/notation/). 
+//!
+//! A subset of the [Move] enum, is provide by the [FaceMove] enum, which only contains
+//! face moves. This is the subset of available moves for the [crate::FixedCentersCube].
+//!
+//! Further, conversion between moves and cubes are provided via From/TryFrom traits.
+//! ```rust
+//! use std::convert::TryFrom;
+//! use cubie::{ Move, Cube };
+//!
+//! let x_rotation_cube: Cube = Move::X1.into();
+//! assert_eq!(Move::try_from(x_rotation_cube), Ok(Move::X1));
+//! ```
+
 use crate::CenterMap;
 use crate::{CornerMap, Cube, EdgeMap, Face, FixedCentersCube};
+
 
 use std::mem;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -36,19 +63,22 @@ impl std::convert::TryFrom<u8> for Move {
         } else {
             unsafe { Ok(mem::transmute(value)) }
         }
-    }
+   }
 }
-
 impl std::convert::TryFrom<FixedCentersCube> for FaceMove {
     type Error = ();
     fn try_from(cube: FixedCentersCube) -> Result<Self, ()> {
         use crate::FaceMove::*;
-        let pftable = &[U1, U1, U1, F3, U1, D2, U1, R3,
-                        U1, F1, L2, R1, U1, D1, L3, U1,
-                        L1, B3, U1, U1, U2, D3, U1, U1,
-                        B1, R2, U1, U3, B2, U1, F2, U1];
+        let pftable = &[
+            U1, U1, U1, F3, U1, D2, U1, R3,
+            U1, F1, L2, R1, U1, D1, L3, U1,
+            L1, B3, U1, U1, U2, D3, U1, U1,
+            B1, R2, U1, U3, B2, U1, F2, U1
+        ];
+
         let (a,b) = cube.raw();
-        let index = (((a^b)*35) >> 38)&0x1f;
+        let index = (((a^b).wrapping_mul(35)) >> 38)&0x1f;
+
         let mv = pftable[index as usize];
         if mv.fc_cube() == cube {
             Ok(mv)
@@ -71,8 +101,8 @@ impl std::convert::TryFrom<Cube> for Move {
                         U1, Fw2, Uw2];
         let (a,b) = cube.raw();
         let d = a^b;
-        let hx1 = d * 18236133;
-        let hx2 = (d * 4852774) & (0x20 << 40);
+        let hx1 = d.wrapping_mul(18236133);
+        let hx2 = (d.wrapping_mul(4852774)) & (0x20 << 40);
         let index = ((hx1 ^ hx2) >> 40) & 0x3f;
         let mv1 = phtable[index as usize];
         if mv1.cube() == cube {
@@ -208,6 +238,8 @@ impl FromStr for Move {
         }
         match rem {
             b"" =>  Ok(base),
+            b"1" =>  Ok(base),
+            b"3" =>  Ok(base.ccw()),
             b"'" => Ok(base.ccw()),
             b"2" => Ok(base.two()),
             b"w" => Ok(base.two()),
@@ -281,8 +313,10 @@ pub enum MoveKind {
 }
 
 impl Move {
-    // return the number of moves.
+    /// Number of move variants.
     pub const COUNT: u8 = 54;
+
+    /// For information consult arguments enums, [MoveKind], [Face] and [MoveAngle]. 
     pub fn new(kind: MoveKind, face: Face, angle: MoveAngle) -> Move {
         use Move::*;
         match kind {
@@ -344,10 +378,19 @@ impl Move {
             MoveKind::Wide,
         ])[self as usize / 9]
     }
-    // An iterator over all the `Turn` variants.
+    /// An iterator over all the `Turn` variants.
     pub fn moves() -> impl Iterator<Item = Move> {
-        unsafe { (0..54u8).map(|t| mem::transmute(t)) }
+        unsafe { (0u8..Move::COUNT).map(|t| mem::transmute(t)) }
     }
+    /// Rotates the move such centers of move or projected to the position defined in the
+    /// a center map.
+    /// ```
+    /// use cubie::Move;
+    /// use std::convert::TryFrom;
+    /// 
+    /// let projected = Move::R1.projection(Move::Y1.centers());
+    /// assert_eq!(projected, Move::F1);
+    /// ```
     pub fn projection(self, centers: CenterMap) -> Move {
         Move::new(self.kind(), centers.get(self.face()), self.angle())
     }
@@ -389,26 +432,6 @@ impl Move {
     }
 
     #[inline]
-    pub fn centers(self) -> CenterMap {
-        self.into()
-    }
-
-    #[inline]
-    pub fn cube(self) -> Cube {
-        self.into()
-    }
-
-    #[inline]
-    pub fn corners(self) -> CornerMap {
-        self.into()
-    }
-
-    #[inline]
-    pub fn edges(self) -> EdgeMap {
-        self.into()
-    }
-
-    #[inline]
     pub fn inverse(self) -> Move {
         let v = self as u8;
         unsafe { mem::transmute(v.wrapping_sub((v % 3).wrapping_sub(1) << 1)) }
@@ -417,6 +440,31 @@ impl Move {
     }
 }
 
+/// # Convenience Conversion Methods
+impl Move {
+    /// Convert into corresponding [Cube]. 
+    #[inline]
+    pub fn cube(self) -> Cube {
+        self.into()
+    }
+    /// Convert into corresponding [CornerMap]. 
+    #[inline]
+    pub fn corners(self) -> CornerMap {
+        self.into()
+    }
+
+    /// Convert into corresponding [CenterMap]. 
+    #[inline]
+    pub fn centers(self) -> CenterMap {
+        self.into()
+    }
+
+    /// Convert into corresponding [EdgeMap]. 
+    #[inline]
+    pub fn edges(self) -> EdgeMap {
+        self.into()
+    }
+}
 /// A `FaceMove` respect a move of a outer face on the cube and is a subset of `Move`.
 ///
 /// All face moves leave the centers of the cubes unchanged, this subset  
@@ -604,6 +652,18 @@ impl std::ops::MulAssign<FaceMove> for CenterMap {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cube_into_move() {
+        for mv in Move::moves() {
+            use std::convert::TryFrom;
+            assert_eq!(Move::try_from(mv.cube()), Ok(mv));
+        }
+        for mv in FaceMove::moves() {
+            use std::convert::TryFrom;
+            assert_eq!(FaceMove::try_from(mv.fc_cube()), Ok(mv));
+        }
+    }
     #[test]
     fn center_index_rotation_table() {
         for (index, cube) in ROTATION_TABLE.iter().enumerate() {

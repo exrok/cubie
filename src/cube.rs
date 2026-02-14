@@ -35,11 +35,27 @@ impl CenteredCornerMap {
     }
 }
 
-/// 3x3 Puzzle Cube
+/// Stores the entire state of Rubiks cube including rotation.
+///
+/// Cube models element an element in group of cube position where
+/// the identity element is a solved cube constructed via [Cube::default()], the
+/// group action implemented via the multiplication operator. 
+///
+/// # Example
+/// ```
+/// use cubie::{ Cube, Move::* };
+/// let identity = Cube::default(); 
+/// 
+/// assert_eq!(identity * R1, R1.cube());
+/// assert_eq!(identity * U1, U1.cube());
+/// 
+/// assert_eq!(identity * R1 * U1, R1.cube() * U1.cube());
+/// assert_eq!(Cube::from([R1, U1]), R1.cube() * U1.cube());
+/// ```
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Cube {
-    pub centered_corners: CenteredCornerMap,
-    pub edges: EdgeMap,
+    pub(crate) centered_corners: CenteredCornerMap,
+    pub(crate) edges: EdgeMap,
 }
 
 impl Default for Cube {
@@ -51,7 +67,6 @@ impl Default for Cube {
     }
 }
 
-/// # Components
 impl Cube {
     pub fn new(centers: CenterMap, corners: CornerMap, edges: EdgeMap) -> Cube {
         Cube {
@@ -59,6 +74,7 @@ impl Cube {
             edges,
         }
     }
+
     pub fn corners(&self) -> CornerMap {
         self.centered_corners.corners()
     }
@@ -80,6 +96,7 @@ impl Cube {
 }
 
 impl Cube {
+    /// Returns the raw representation, this representation is stable. 
     pub const fn raw(self) -> (u64, u64) {
         (self.centered_corners.raw, self.edges.raw)
     }
@@ -101,6 +118,7 @@ impl Cube {
             edges: EdgeMap { raw: edges },
         }
     }
+    /// Computes `self.inverse() * rhs` efficiently.
     pub fn inverse_multiply(self, rhs: Cube) -> Cube {
         Cube {
             centered_corners: CenteredCornerMap::new(
@@ -110,6 +128,8 @@ impl Cube {
             edges: self.edges.inverse_multiply(rhs.edges),
         }
     }
+
+    /// Computes the inverse of the cube.
     pub fn inverse(self) -> Cube {
         Cube {
             centered_corners: CenteredCornerMap::new(
@@ -120,6 +140,7 @@ impl Cube {
         }
     }
 
+    /// Checks if the cube is solvable using the moves from the [Move] enum.  
     pub fn has_solution(self) -> bool {
         self.corners().orientation_residue().is_identity()
             && self.edges().orientation_residue().is_identity()
@@ -128,13 +149,17 @@ impl Cube {
                 ^ self.centers().permutation_parity())
                 == false
     }
-
+    
     pub fn validate(self) -> Result<(), MapError> {
         self.edges
             .validate()
             .and_then(|_| self.corners().validate())
             .and_then(|_| self.centers().validate())
     }
+
+    /// Returns true if the in a solved position. Note: this no the same
+    /// as being the identify cube, as rotating a cube solved cube
+    /// results in another solved cube.
     pub fn is_solved(self) -> bool {
         self == crate::moves::ROTATION_TABLE[self.centers().index() as usize]
     }
