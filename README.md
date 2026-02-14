@@ -7,7 +7,7 @@ permutation maps. Every type is `Copy`. Cube operations are group
 multiplications, so you just use `*` to combine states, `.inverse()` to
 reverse them, and `Cube::default()` is the solved identity element.
 
-![Cube rendered by cubie](imgs/complete.svg)
+<p align="center"><img alt="Image rendered by cubie" src="imgs/complete.svg" width="300px" height="256px"/></p>
 
 ## Usage
 
@@ -59,7 +59,3 @@ pieces.
 
 `has_solution()` tells you if a state is reachable, and `validate()` checks
 structural integrity.
-
-## License
-
-MIT
