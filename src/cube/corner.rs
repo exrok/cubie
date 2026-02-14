@@ -34,7 +34,7 @@ impl Corner {
     }
     #[inline]
     pub fn corners() -> impl Iterator<Item = Corner> {
-        (0..8).map(|i| Corner::from(i))
+        (0..8).map(Corner::from)
     }
 }
 
@@ -125,7 +125,7 @@ impl CornerMap {
     }
     pub fn iter(
         self,
-    ) -> impl Iterator<Item = (Corner, (Corner, CornerOrientation))> + ExactSizeIterator {
+    ) -> impl ExactSizeIterator<Item = (Corner, (Corner, CornerOrientation))> {
         let mut set = self.raw;
         (0..8).map(move |i| unsafe {
             let corner: Corner = transmute(i as u8);
@@ -249,7 +249,7 @@ impl CornerMap {
     }
     pub fn permutation_index(self) -> CPIndex {
         const fn section(sh: u64) -> u64 {
-            return 0b00111 << (sh * 8);
+            0b00111 << (sh * 8)
         }
         let x: u64 = self.raw & 0x0707070707070707;
         let dist = 0x0101_0101_0101;
@@ -263,26 +263,26 @@ impl CornerMap {
                 + (((x_cmp + (x & section(2)).wrapping_mul(dist)) & s_mask).count_ones() * 24)
                 + (((x_cmp + (x & section(3)).wrapping_mul(dist)) & s_mask).count_ones() * 6)
                 + (((x_cmp + (x & section(4)).wrapping_mul(dist)) & s_mask).count_ones() * 2)
-                + (((x_cmp + (x & section(5)).wrapping_mul(dist)) & s_mask).count_ones() * 1),
+                + ((x_cmp + (x & section(5)).wrapping_mul(dist)) & s_mask).count_ones(),
         )
     }
     pub fn set_permutation_index(&mut self, index: CPIndex) {
-        let mut idx = index.0 as u32;
+        let mut idx = index.0;
         let mut val = 0xFEDCBA9876543210u64;
         let mut extract = 0u64;
-        for p in 2..8 as u64 + 1 {
-            extract = extract << 4 | (idx as u64) % p;
+        for p in 2..8_u64 + 1 {
+            extract = (extract << 4) | ((idx as u64) % p);
             idx /= p as u32;
         }
         let mut res = 0;
         for e in 0..7 {
             let v = ((extract & 0xf) << 2) as u32;
             extract >>= 4;
-            res |= (((val >> v) & 0x7) as u64) << (e * 8);
+            res |= ((val >> v) & 0x7) << (e * 8);
             let m = (1u64 << v) - 1;
             val = val & m | (val >> 4) & !m; // TODO verfiy
         }
-        res |= ((val & 0x7) as u64) << (8 * 7);
+        res |= (val & 0x7) << (8 * 7);
         self.raw &= 0x18_18_18_18_18_18_18_18;
         self.raw |= res;
     }
@@ -346,12 +346,12 @@ fn multiply_orientation(a: u64, ret: u64) -> u64 {
     const SELECT: u64 = 0x18_18_18_18_18_18_18_18;
 
     let mut xm = a & SELECT;
-    xm = (ret & SELECT) + (xm); //
+    xm += ret & SELECT ; //
     xm = ((xm >> 2) + xm) & SELECT; // orientation MOD 3
     let three_bit = (xm >> 1) & xm; //
 
-    let p2 = ret ^ ((ret ^ xm ^ (three_bit | (three_bit << 1))) & SELECT);
-    p2
+    
+    ret ^ ((ret ^ xm ^ (three_bit | (three_bit << 1))) & SELECT)
 }
 
 pub fn map_inv_mul(a: u64, b: u64) -> u64 {

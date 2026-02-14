@@ -32,7 +32,6 @@ impl FixedCentersCube {
     pub const fn raw(self) -> (u64, u64) {
         (self.corners.raw, self.edges.raw)
     }
-
 }
 impl FixedCentersCube {
     pub fn has_solution(self) -> bool {

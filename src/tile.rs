@@ -216,7 +216,7 @@ impl TileMap {
                     f[1]
                 };
 
-                if (((0b01101001_00) >> ((pos as u64) ^ (corner as u64))) ^ y_axis) & 0b100 != 0 {
+                if (((0b01101001_00) >> ((pos as u64) ^ corner)) ^ y_axis) & 0b100 != 0 {
                     f[unset] ^= 1;
                 }
                 tiles[map[unset]] = Some(unsafe { std::mem::transmute(f[unset] as u8) });
@@ -243,7 +243,7 @@ impl TileMap {
                 continue;
             };
 
-            if (((0b01101001_00) >> ((pos as u64) ^ (corner as u64))) ^ y_axis) & 0b100 != 0 {
+            if (((0b01101001_00) >> ((pos as u64) ^ corner)) ^ y_axis) & 0b100 != 0 {
                 continue;
             }
 
@@ -252,8 +252,8 @@ impl TileMap {
                 twist = twist.inverse();
             }
 
-            corner_acc ^= corner as u64;
-            twist_acc = twist_acc * twist;
+            corner_acc ^= corner;
+            twist_acc *= twist;
             set_cnt += 1;
         }
         if set_cnt == 7 {
@@ -275,7 +275,7 @@ impl TileMap {
                     .iter()
                     .map(|m| tiles[*m])
                     .zip(new.iter())
-                    .all(|(o, n)| o.map_or(true, |a| a == *n))
+                    .all(|(o, n)| o.is_none_or(|a| a == *n))
                 {
                     for i in 0..3 {
                         tiles[map[i]] = Some(new[i]);
@@ -353,7 +353,7 @@ impl TileMap {
             raw |= parity << (4 + offset * 5);
             raw |= (pos as u64) << (offset * 5);
         }
-        EdgeMap::from_raw(raw).map_err(|err| TMErr::Edge(err))
+        EdgeMap::from_raw(raw).map_err(TMErr::Edge)
     }
 
     pub fn centers(&self) -> Result<CenterMap, TMErr> {
@@ -374,7 +374,7 @@ impl TileMap {
         }
         CenterMap::from_raw((y1 << 5) | (x1 << (8 + 5)) | (z1 << (16 + 5)))
             .map(|centers| centers.inverse())
-            .map_err(|err| TMErr::Center(err))
+            .map_err(TMErr::Center)
     }
     pub fn corners(&self) -> Result<CornerMap, TMErr> {
         let tiles = self.as_array();
@@ -402,7 +402,7 @@ impl TileMap {
                 return Err(TMErr::InvalidPiece); // sanity
             };
 
-            if (((0b01101001_00) >> ((pos as u64) ^ (corner as u64))) ^ y_axis) & 0b100 != 0 {
+            if (((0b01101001_00) >> ((pos as u64) ^ corner)) ^ y_axis) & 0b100 != 0 {
                 return Err(TMErr::InvalidPiece); // sanity
             }
 
@@ -413,7 +413,7 @@ impl TileMap {
             raw |= (twist as u64) << (corner as u32 * 8 + 3);
             raw |= (pos as u64) << (corner as u32 * 8);
         }
-        CornerMap::from_raw(raw).map_err(|err| TMErr::Corner(err))
+        CornerMap::from_raw(raw).map_err(TMErr::Corner)
     }
 
     #[doc(hidden)]
@@ -443,8 +443,8 @@ impl TileMap {
                 std::mem::swap(&mut a, &mut b);
             }
             let (a_index, b_index) = tiles_from_edge(pos);
-            fm[a_index as usize] = a;
-            fm[b_index as usize] = b;
+            fm[a_index] = a;
+            fm[b_index] = b;
         }
     }
     #[doc(hidden)]

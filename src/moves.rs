@@ -5,12 +5,12 @@
 //! moves acknowledges by the speed cubing.
 //!
 //! Each move has three components which defines its effect on the cube:
-//!  - the set of cubies affected <small>(denoted by prefixed letter(s) U,D,Uw)</small>. 
-//!  - the axis of rotation <small>(denoted by prefixed letter(s) 'U,D,Uw')</small>. 
+//!  - the set of cubies affected <small>(denoted by prefixed letter(s) U,D,Uw)</small>.
+//!  - the axis of rotation <small>(denoted by prefixed letter(s) 'U,D,Uw')</small>.
 //!  - the number of 90° clock-wise rotations about the axis <small>(denoted by 1,2,3 )</small>
 //!
 //! The standard convention for defining the clock-wise direction from the speed-cubing community is
-//! used you can find more information [here](https://ruwix.com/the-rubiks-cube/notation/). 
+//! used you can find more information [here](https://ruwix.com/the-rubiks-cube/notation/).
 //!
 //! A subset of the [Move] enum, is provide by the [FaceMove] enum, which only contains
 //! face moves. This is the subset of available moves for the [crate::FixedCentersCube].
@@ -27,31 +27,66 @@
 use crate::CenterMap;
 use crate::{CornerMap, Cube, EdgeMap, Face, FixedCentersCube};
 
-
 use std::mem;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Move {
-    U1, U2, U3,
-    D1, D2, D3,
-    F1, F2, F3,
-    B1, B2, B3,
-    R1, R2, R3,
-    L1, L2, L3,
+    U1,
+    U2,
+    U3,
+    D1,
+    D2,
+    D3,
+    F1,
+    F2,
+    F3,
+    B1,
+    B2,
+    B3,
+    R1,
+    R2,
+    R3,
+    L1,
+    L2,
+    L3,
 
-    E1, E2, E3,
-    S1, S2, S3,
-    M1, M2, M3,
+    E1,
+    E2,
+    E3,
+    S1,
+    S2,
+    S3,
+    M1,
+    M2,
+    M3,
 
-    Y1, Y2, Y3,
-    Z1, Z2, Z3,
-    X1, X2, X3,
+    Y1,
+    Y2,
+    Y3,
+    Z1,
+    Z2,
+    Z3,
+    X1,
+    X2,
+    X3,
 
-    Uw1, Uw2, Uw3,
-    Dw1, Dw2, Dw3,
-    Fw1, Fw2, Fw3,
-    Bw1, Bw2, Bw3,
-    Rw1, Rw2, Rw3,
-    Lw1, Lw2, Lw3,
+    Uw1,
+    Uw2,
+    Uw3,
+    Dw1,
+    Dw2,
+    Dw3,
+    Fw1,
+    Fw2,
+    Fw3,
+    Bw1,
+    Bw2,
+    Bw3,
+    Rw1,
+    Rw2,
+    Rw3,
+    Lw1,
+    Lw2,
+    Lw3,
 }
 
 impl std::convert::TryFrom<u8> for Move {
@@ -59,25 +94,23 @@ impl std::convert::TryFrom<u8> for Move {
     #[inline]
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         if value >= 54 {
-            return Err("Value too large (>54).");
+            Err("Value too large (>54).")
         } else {
             unsafe { Ok(mem::transmute(value)) }
         }
-   }
+    }
 }
 impl std::convert::TryFrom<FixedCentersCube> for FaceMove {
     type Error = ();
     fn try_from(cube: FixedCentersCube) -> Result<Self, ()> {
         use crate::FaceMove::*;
         let pftable = &[
-            U1, U1, U1, F3, U1, D2, U1, R3,
-            U1, F1, L2, R1, U1, D1, L3, U1,
-            L1, B3, U1, U1, U2, D3, U1, U1,
-            B1, R2, U1, U3, B2, U1, F2, U1
+            U1, U1, U1, F3, U1, D2, U1, R3, U1, F1, L2, R1, U1, D1, L3, U1, L1, B3, U1, U1, U2, D3,
+            U1, U1, B1, R2, U1, U3, B2, U1, F2, U1,
         ];
 
-        let (a,b) = cube.raw();
-        let index = (((a^b).wrapping_mul(35)) >> 38)&0x1f;
+        let (a, b) = cube.raw();
+        let index = (((a ^ b).wrapping_mul(35)) >> 38) & 0x1f;
 
         let mv = pftable[index as usize];
         if mv.fc_cube() == cube {
@@ -91,16 +124,14 @@ impl std::convert::TryFrom<Cube> for Move {
     type Error = ();
     fn try_from(cube: Cube) -> Result<Self, ()> {
         use crate::Move::*;
-        let phtable = &[Bw3, U3, Y1, Z1, Uw3, U1, Fw1, F1,
-                        B3, B2, M1, X1, Z2, U1, X2, S1, L3,
-                        Dw3, B1, Y3, U1, U1, U2, Rw2, U1, D1,
-                        F3, Lw2, E1, F2, Lw1, U1, R3, U1, Dw2,
-                        X3, M3, Bw1, R1, Bw2, Z3, D3, D2, M2,
-                        S3, U1, Lw3, U1, E3, S2, U1, Dw1, Y2,
-                        L2, Uw1, Fw3, L1, E2, Rw3, Rw1, R2,
-                        U1, Fw2, Uw2];
-        let (a,b) = cube.raw();
-        let d = a^b;
+        let phtable = &[
+            Bw3, U3, Y1, Z1, Uw3, U1, Fw1, F1, B3, B2, M1, X1, Z2, U1, X2, S1, L3, Dw3, B1, Y3, U1,
+            U1, U2, Rw2, U1, D1, F3, Lw2, E1, F2, Lw1, U1, R3, U1, Dw2, X3, M3, Bw1, R1, Bw2, Z3,
+            D3, D2, M2, S3, U1, Lw3, U1, E3, S2, U1, Dw1, Y2, L2, Uw1, Fw3, L1, E2, Rw3, Rw1, R2,
+            U1, Fw2, Uw2,
+        ];
+        let (a, b) = cube.raw();
+        let d = a ^ b;
         let hx1 = d.wrapping_mul(18236133);
         let hx2 = (d.wrapping_mul(4852774)) & (0x20 << 40);
         let index = ((hx1 ^ hx2) >> 40) & 0x3f;
@@ -201,7 +232,7 @@ use std::str::FromStr;
 pub enum MoveParseError {
     MissingTurnCharacter,
     UnexpectedWide,
-    UnknownSymbol
+    UnknownSymbol,
 }
 impl FromStr for Move {
     type Err = MoveParseError;
@@ -227,7 +258,7 @@ impl FromStr for Move {
             'b' => Move::Bw1,
             'r' => Move::Rw1,
             'l' => Move::Lw1,
-            _ => return Err(MoveParseError::UnknownSymbol) 
+            _ => return Err(MoveParseError::UnknownSymbol),
         };
         let mut rem = iter.as_str().as_bytes();
         if let Some(b'w') = rem.first() {
@@ -237,19 +268,19 @@ impl FromStr for Move {
             rem = &rem[1..];
         }
         match rem {
-            b"" =>  Ok(base),
-            b"1" =>  Ok(base),
-            b"3" =>  Ok(base.ccw()),
+            b"" => Ok(base),
+            b"1" => Ok(base),
+            b"3" => Ok(base.ccw()),
             b"'" => Ok(base.ccw()),
             b"2" => Ok(base.two()),
             b"w" => Ok(base.two()),
-            _ =>  Err(MoveParseError::UnknownSymbol)
+            _ => Err(MoveParseError::UnknownSymbol),
         }
     }
 }
 impl<T: AsRef<[Move]>> From<T> for Cube {
     #[inline]
-    fn from(moves:T) -> Cube {
+    fn from(moves: T) -> Cube {
         let mut cube = Cube::default();
         for mv in moves.as_ref() {
             cube *= mv.cube();
@@ -316,13 +347,12 @@ impl Move {
     /// Number of move variants.
     pub const COUNT: u8 = 54;
 
-    /// For information consult arguments enums, [MoveKind], [Face] and [MoveAngle]. 
+    /// For information consult arguments enums, [MoveKind], [Face] and [MoveAngle].
     pub fn new(kind: MoveKind, face: Face, angle: MoveAngle) -> Move {
         use Move::*;
         match kind {
             MoveKind::Face => FaceMove::new(face, angle).into(),
-            MoveKind::Wide => 
-                unsafe { mem::transmute(face as u8 * 3 + angle as u8 +36)},
+            MoveKind::Wide => unsafe { mem::transmute(face as u8 * 3 + angle as u8 + 36) },
             MoveKind::Rotation => {
                 // let rotation = 27 + ((face as u8)>>1)*3 + angle as u8;
                 // let mv:Move = unsafe{ mem::transmute(rotation)};
@@ -362,9 +392,8 @@ impl Move {
     pub fn face(self) -> Face {
         use Face::*;
         (&[
-            Up, Down, Front, Back, Right, Left,
-            Down, Front, Left, Up, Front, Right,
-            Up, Down, Front, Back, Right, Left,
+            Up, Down, Front, Back, Right, Left, Down, Front, Left, Up, Front, Right, Up, Down,
+            Front, Back, Right, Left,
         ])[self as usize / 3]
     }
     pub fn kind(self) -> MoveKind {
@@ -387,7 +416,7 @@ impl Move {
     /// ```
     /// use cubie::Move;
     /// use std::convert::TryFrom;
-    /// 
+    ///
     /// let projected = Move::R1.projection(Move::Y1.centers());
     /// assert_eq!(projected, Move::F1);
     /// ```
@@ -442,24 +471,24 @@ impl Move {
 
 /// # Convenience Conversion Methods
 impl Move {
-    /// Convert into corresponding [Cube]. 
+    /// Convert into corresponding [Cube].
     #[inline]
     pub fn cube(self) -> Cube {
         self.into()
     }
-    /// Convert into corresponding [CornerMap]. 
+    /// Convert into corresponding [CornerMap].
     #[inline]
     pub fn corners(self) -> CornerMap {
         self.into()
     }
 
-    /// Convert into corresponding [CenterMap]. 
+    /// Convert into corresponding [CenterMap].
     #[inline]
     pub fn centers(self) -> CenterMap {
         self.into()
     }
 
-    /// Convert into corresponding [EdgeMap]. 
+    /// Convert into corresponding [EdgeMap].
     #[inline]
     pub fn edges(self) -> EdgeMap {
         self.into()
@@ -514,7 +543,7 @@ impl std::convert::TryFrom<u8> for FaceMove {
     #[inline]
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         if value >= 18 {
-            return Err("Value too large (>17).");
+            Err("Value too large (>17).")
         } else {
             // Safety: see above check, FaceMove is represented by u8 in 0..18.
             unsafe { Ok(mem::transmute(value)) }
@@ -552,8 +581,7 @@ impl FaceMove {
     pub fn inverse(self) -> FaceMove {
         use FaceMove::*;
         (&[
-            U3, U2, U1, D3, D2, D1, F3, F2, F1, B3, B2, B1, R3, R2, R1, L3, L2,
-            L1,
+            U3, U2, U1, D3, D2, D1, F3, F2, F1, B3, B2, B1, R3, R2, R1, L3, L2, L1,
         ])[self as usize]
     }
 

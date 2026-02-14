@@ -39,16 +39,16 @@ impl CenteredCornerMap {
 ///
 /// Cube models element an element in group of cube position where
 /// the identity element is a solved cube constructed via [Cube::default()], the
-/// group action implemented via the multiplication operator. 
+/// group action implemented via the multiplication operator.
 ///
 /// # Example
 /// ```
 /// use cubie::{ Cube, Move::* };
-/// let identity = Cube::default(); 
-/// 
+/// let identity = Cube::default();
+///
 /// assert_eq!(identity * R1, R1.cube());
 /// assert_eq!(identity * U1, U1.cube());
-/// 
+///
 /// assert_eq!(identity * R1 * U1, R1.cube() * U1.cube());
 /// assert_eq!(Cube::from([R1, U1]), R1.cube() * U1.cube());
 /// ```
@@ -96,7 +96,7 @@ impl Cube {
 }
 
 impl Cube {
-    /// Returns the raw representation, this representation is stable. 
+    /// Returns the raw representation, this representation is stable.
     pub const fn raw(self) -> (u64, u64) {
         (self.centered_corners.raw, self.edges.raw)
     }
@@ -144,12 +144,10 @@ impl Cube {
     pub fn has_solution(self) -> bool {
         self.corners().orientation_residue().is_identity()
             && self.edges().orientation_residue().is_identity()
-            && (self.edges.permutation_parity()
-                ^ self.corners().permutation_parity()
-                ^ self.centers().permutation_parity())
-                == false
+            && !(self.edges.permutation_parity()
+                ^ self.corners().permutation_parity() ^ self.centers().permutation_parity())
     }
-    
+
     pub fn validate(self) -> Result<(), MapError> {
         self.edges
             .validate()
@@ -298,9 +296,37 @@ mod tests {
         let f = extend_cw(Move::F1, y.ccw * r.cw * y.cw);
 
         // and for fun and testing...
-        let d_ccw = r.two * l.two * u.cw * f.two * b.two * u.cw * f.two * r.two * f.two * b.two
-            * u.two * l.two * u.two * l.two * r.two * u.two * r.two * u.two * r.two * f.two * u.ccw
-            * r.two * b.two * r.two * l.two * f.two * l.two * u.cw * b.two * f.two * u.cw;
+        let d_ccw = r.two
+            * l.two
+            * u.cw
+            * f.two
+            * b.two
+            * u.cw
+            * f.two
+            * r.two
+            * f.two
+            * b.two
+            * u.two
+            * l.two
+            * u.two
+            * l.two
+            * r.two
+            * u.two
+            * r.two
+            * u.two
+            * r.two
+            * f.two
+            * u.ccw
+            * r.two
+            * b.two
+            * r.two
+            * l.two
+            * f.two
+            * l.two
+            * u.cw
+            * b.two
+            * f.two
+            * u.cw;
 
         let d = extend_cw(Move::D1, d_ccw * d_ccw * d_ccw);
 
@@ -308,14 +334,14 @@ mod tests {
         let s = extend_cw(Move::S1, z.cw * f.ccw * b.cw);
         let m = extend_cw(Move::M1, x.ccw * r.cw * l.ccw);
 
-        extend_cw(Move::Uw1, d.cw*y.cw);
-        extend_cw(Move::Dw1, u.cw*y.ccw);
+        extend_cw(Move::Uw1, d.cw * y.cw);
+        extend_cw(Move::Dw1, u.cw * y.ccw);
 
-        extend_cw(Move::Fw1, b.cw*z.cw);
-        extend_cw(Move::Bw1, f.cw*z.ccw);
+        extend_cw(Move::Fw1, b.cw * z.cw);
+        extend_cw(Move::Bw1, f.cw * z.ccw);
 
-        extend_cw(Move::Rw1, l.cw*x.cw);
-        extend_cw(Move::Lw1, r.cw*x.ccw);
+        extend_cw(Move::Rw1, l.cw * x.cw);
+        extend_cw(Move::Lw1, r.cw * x.ccw);
         // ensure equality is actually working.
         assert_ne!(e.cw, u.ccw);
         assert_ne!(s.cw, s.ccw);

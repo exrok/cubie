@@ -59,3 +59,36 @@ pieces.
 
 `has_solution()` tells you if a state is reachable, and `validate()` checks
 structural integrity.
+
+## Solver
+
+Cubie includes a two-phase Kociemba solver that finds near-optimal solutions
+(typically under 21 moves). Tables are built automatically on the first
+solve:
+
+```rust
+use cubie::{Cube, Move::*};
+
+let scrambled = Cube::default() * R1 * U1 * F2 * D3 * L1 * B2;
+
+let mut solver = cubie::Solver::default();
+let solution = solver.search(scrambled);
+
+// Verify
+let mut cube = scrambled;
+for &mv in &solution {
+    cube *= mv;
+}
+assert!(cube.is_solved());
+```
+
+The solver reuses its pruning tables across calls, so subsequent solves are
+fast. If you need to show progress during the initial table build, use
+`initialize_tables_incremental()`:
+
+```rust
+let mut solver = cubie::Solver::default();
+while solver.initialize_tables_incremental() > 0 {
+    // update a progress bar, yield to an event loop, etc.
+}
+```

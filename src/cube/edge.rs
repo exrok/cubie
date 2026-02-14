@@ -163,16 +163,16 @@ impl std::ops::MulAssign for EdgeMap {
 ///
 /// Converting an `EdgeMap` to a `TileMap` can be used to visualize the mapping, see [TileMap::terminal_display](struct.TileMap.html#method.terminal_display).
 ///
-/// # Example
+/// # Examples
 /// ```
-/// use cubie::cube::edge::{ Edge, Flip, EdgeMap };
+/// use cubie::cube::edge::{ Edge, EdgeOrientation, EdgeMap };
 /// use cubie::Move;
 ///
 /// let mut edgemap = EdgeMap::default(); // solved edges
-/// assert_eq!(edgemap.get(Edge::FU), (Edge::FU, Flip::Identity));
+/// assert_eq!(edgemap.get(Edge::FU), (Edge::FU, EdgeOrientation::Identity));
 ///
 /// edgemap *= Move::U1;
-/// assert_eq!(edgemap.get(Edge::FU), (Edge::LU, Flip::Identity));
+/// assert_eq!(edgemap.get(Edge::FU), (Edge::LU, EdgeOrientation::Identity));
 ///
 /// {
 ///   use Move::*;
@@ -230,7 +230,7 @@ impl EdgeMap {
             )
         }
     }
-    pub fn iter(self) -> impl Iterator<Item = (Edge, (Edge, EdgeOrientation))> + ExactSizeIterator {
+    pub fn iter(self) -> impl ExactSizeIterator<Item = (Edge, (Edge, EdgeOrientation))> {
         let mut set = self.raw;
         (0..12).map(move |i| unsafe {
             let edge: Edge = transmute(i as u8);
@@ -240,7 +240,9 @@ impl EdgeMap {
             (edge, (position, ori))
         })
     }
-    pub fn from_iter(iter: impl Iterator<Item = (Edge, (Edge, EdgeOrientation))>) -> Option<EdgeMap> {
+    pub fn from_iter(
+        iter: impl Iterator<Item = (Edge, (Edge, EdgeOrientation))>,
+    ) -> Option<EdgeMap> {
         let mut res = EdgeMap::default().raw;
         for (edge, (pos, ori)) in iter {
             res &= !(0b11111u64 << ((edge as u64) * 5));
@@ -330,7 +332,7 @@ impl EdgeMap {
             idx = (12 - edge as u32) * idx + ((val >> v) & 0xf) as u32;
             val -= 0x1111111111111110 << v;
         }
-        EPIndex(idx as u32)
+        EPIndex(idx)
     }
     pub fn set_orientation_index(&mut self, index: EOIndex) {
         // if BMI2 is avaibled should use pdep TODO
@@ -345,22 +347,22 @@ impl EdgeMap {
     }
 
     pub fn set_permutation_index(&mut self, index: EPIndex) {
-        let mut idx = index.0 as u32;
+        let mut idx = index.0;
         let mut val = 0xFEDCBA9876543210u64;
         let mut extract = 0u64;
-        for p in 2..12 as u64 + 1 {
-            extract = extract << 4 | (idx as u64) % p;
+        for p in 2..12_u64 + 1 {
+            extract = (extract << 4) | ((idx as u64) % p);
             idx /= p as u32;
         }
         let mut res = 0;
         for e in 0..11 {
             let v = ((extract & 0xf) << 2) as u32;
             extract >>= 4;
-            res |= (((val >> v) & 0xf) as u64) << (e * 5);
+            res |= ((val >> v) & 0xf) << (e * 5);
             let m = (1u64 << v) - 1;
             val = val & m | (val >> 4) & !m; // TODO verfiy
         }
-        res |= ((val & 0xf) as u64) << (5 * 11);
+        res |= (val & 0xf) << (5 * 11);
         self.raw &= E4;
         self.raw |= res;
     }

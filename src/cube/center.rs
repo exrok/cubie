@@ -74,7 +74,7 @@ impl CenterMap {
     }
 
     #[inline]
-    pub fn iter(self) -> impl Iterator<Item = (Face, Face)> + ExactSizeIterator {
+    pub fn iter(self) -> impl ExactSizeIterator<Item = (Face, Face)> {
         (0..3).map(move |i| {
             let face: Face = (i * 2).try_into().unwrap();
             (face, self.get(face))
@@ -92,7 +92,7 @@ impl CenterMap {
         (parity_mask >> self.index()) & 0b1 == 1
     }
     pub fn index(self) -> u8 {
-        let mut index = (self.raw & 0xE0_E0_C0) * (10 + (1 << 8) * 1 + (1 << 16) * 7);
+        let mut index = (self.raw & 0xE0_E0_C0) * (10 + (1 << 8) + (1 << 16) * 7);
         index = (!index >> 21) & 0b11111;
         index ^= (index + 0b1000) >> 2;
         index as u8
